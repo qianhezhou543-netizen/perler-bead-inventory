@@ -1,0 +1,5289 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173b32">
+  <link rel="icon" href="data:,">
+  <title>拼豆库存管理</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17201d;
+      --muted: #66716d;
+      --surface: #ffffff;
+      --surface-soft: #f1f4f1;
+      --canvas: #e9eeeb;
+      --line: #ccd5d0;
+      --line-strong: #aebbb5;
+      --brand: #176b53;
+      --brand-strong: #0f503e;
+      --brand-soft: #dceee7;
+      --warning: #a86612;
+      --warning-soft: #fff3d9;
+      --danger: #b4232e;
+      --danger-strong: #8f1822;
+      --danger-soft: #fde8ea;
+      --focus: #d59219;
+      --shadow: 0 1px 2px rgba(23, 32, 29, 0.07), 0 8px 24px rgba(23, 32, 29, 0.06);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--canvas);
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-width: 0;
+      min-height: 100vh;
+      background: var(--canvas);
+      color: var(--ink);
+      font-family: "Microsoft YaHei UI", "PingFang SC", system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+      letter-spacing: 0;
+    }
+
+    button,
+    select,
+    input[type="number"],
+    input[type="search"] {
+      min-height: 44px;
+    }
+
+    button,
+    summary,
+    label,
+    select,
+    input[type="checkbox"] {
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--focus) 55%, transparent);
+      outline-offset: 2px;
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .app-header {
+      background: #173b32;
+      color: #ffffff;
+      border-bottom: 4px solid #d69a2d;
+    }
+
+    .header-inner,
+    .app-shell {
+      width: min(1480px, 100%);
+      margin: 0 auto;
+      padding-inline: clamp(14px, 3vw, 32px);
+    }
+
+    .header-inner {
+      display: grid;
+      gap: 18px;
+      padding-block: 22px;
+    }
+
+    .brand-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .sync-status {
+      min-height: 40px;
+      margin-left: auto;
+      padding: 7px 11px;
+      border: 1px solid rgba(255, 255, 255, 0.36);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .sync-status:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 46px;
+      height: 46px;
+      flex: 0 0 46px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      padding: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .brand-mark span {
+      border-radius: 50%;
+      background: #f3ce4d;
+    }
+
+    .brand-mark span:nth-child(2n) {
+      background: #ee7789;
+    }
+
+    .brand-mark span:nth-child(3n) {
+      background: #67c8d4;
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .brand-copy p {
+      margin: 0 0 2px;
+      color: #b9d8cd;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(22px, 4vw, 30px);
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .stat {
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .stat-label {
+      display: block;
+      color: #cfe2dc;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .stat-value {
+      display: block;
+      margin-top: 1px;
+      overflow: hidden;
+      font-size: clamp(19px, 4vw, 26px);
+      font-weight: 800;
+      line-height: 1.2;
+      text-overflow: ellipsis;
+    }
+
+    .stat.is-warning .stat-value {
+      color: #ffd06e;
+    }
+
+    .app-shell {
+      padding-block: 18px 32px;
+    }
+
+    .notice {
+      margin-bottom: 14px;
+      padding: 11px 14px;
+      border: 1px solid #d8a240;
+      border-radius: 8px;
+      background: var(--warning-soft);
+      color: #714509;
+      font-weight: 700;
+    }
+
+    .notice[hidden] {
+      display: none;
+    }
+
+    .layout {
+      display: grid;
+      min-width: 0;
+      gap: 14px;
+    }
+
+    .tools-column {
+      display: grid;
+      min-width: 0;
+      align-content: start;
+      gap: 12px;
+    }
+
+    .panel {
+      min-width: 0;
+      overflow: clip;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .panel > summary {
+      position: relative;
+      display: flex;
+      min-height: 54px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 44px 13px 16px;
+      list-style: none;
+      font-weight: 800;
+      user-select: none;
+    }
+
+    .panel > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .panel > summary::after {
+      position: absolute;
+      right: 16px;
+      content: "+";
+      color: var(--brand);
+      font-size: 22px;
+      font-weight: 500;
+      line-height: 1;
+    }
+
+    .panel[open] > summary::after {
+      content: "−";
+    }
+
+    .summary-meta {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .panel-body {
+      min-width: 0;
+      padding: 0 14px 16px;
+      border-top: 1px solid var(--line);
+    }
+
+    .inventory-panel .panel-body {
+      padding-top: 14px;
+    }
+
+    .inventory-toolbar {
+      display: grid;
+      min-width: 0;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .search-wrap {
+      position: relative;
+      min-width: 0;
+    }
+
+    .search-wrap::before {
+      position: absolute;
+      top: 50%;
+      left: 14px;
+      width: 14px;
+      height: 14px;
+      transform: translateY(-58%);
+      border: 2px solid var(--muted);
+      border-radius: 50%;
+      content: "";
+      pointer-events: none;
+    }
+
+    .search-wrap::after {
+      position: absolute;
+      top: calc(50% + 5px);
+      left: 27px;
+      width: 7px;
+      height: 2px;
+      transform: rotate(45deg);
+      background: var(--muted);
+      content: "";
+      pointer-events: none;
+    }
+
+    .field,
+    .search-input {
+      width: 100%;
+      min-width: 0;
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--ink);
+    }
+
+    .search-input {
+      padding: 10px 12px 10px 42px;
+    }
+
+    .field {
+      min-height: 44px;
+      padding: 9px 11px;
+    }
+
+    .field:hover,
+    .search-input:hover {
+      border-color: #7c8e86;
+    }
+
+    .group-filter,
+    .group-actions,
+    .inline-actions {
+      display: flex;
+      min-width: 0;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .filter-btn,
+    .group-btn,
+    .btn {
+      border: 1px solid var(--line-strong);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .filter-btn,
+    .group-btn {
+      min-height: 44px;
+      padding: 7px 12px;
+    }
+
+    .filter-btn[aria-pressed="true"] {
+      border-color: var(--brand);
+      background: var(--brand-soft);
+      color: var(--brand-strong);
+    }
+
+    .group-btn:hover,
+    .filter-btn:hover {
+      border-color: var(--brand);
+    }
+
+    .inventory-grid {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+      gap: 8px;
+    }
+
+    .bead-card {
+      display: grid;
+      min-width: 0;
+      min-height: 78px;
+      grid-template-columns: 40px minmax(0, 1fr);
+      grid-template-rows: auto auto;
+      align-content: center;
+      gap: 2px 10px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #ffffff;
+    }
+
+    .bead-card:hover {
+      border-color: #91a198;
+      background: #fbfcfb;
+    }
+
+    .swatch {
+      width: 40px;
+      height: 40px;
+      grid-row: 1 / 3;
+      align-self: center;
+      border: 1px solid rgba(23, 32, 29, 0.28);
+      border-radius: 6px;
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.24);
+    }
+
+    .color-code {
+      overflow: hidden;
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1.2;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .stock-line {
+      display: flex;
+      min-width: 0;
+      align-items: baseline;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.2;
+    }
+
+    .quantity {
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .low-label {
+      display: none;
+      overflow: hidden;
+      color: var(--danger);
+      font-size: 11px;
+      font-weight: 800;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bead-card.is-low {
+      border-color: #edb6bb;
+      background: #fffafb;
+    }
+
+    .bead-card.is-low .quantity,
+    .bead-card.is-low .low-label {
+      display: inline;
+      color: var(--danger);
+    }
+
+    .empty-state {
+      padding: 36px 16px;
+      border: 1px dashed var(--line-strong);
+      border-radius: 8px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .form-section {
+      display: grid;
+      min-width: 0;
+      gap: 12px;
+      padding-top: 14px;
+    }
+
+    .field-group {
+      display: grid;
+      min-width: 0;
+      gap: 6px;
+    }
+
+    .field-label,
+    .section-label {
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .section-label {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .usage-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .usage-row {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: minmax(0, 1fr) minmax(88px, 0.72fr) 44px;
+      gap: 7px;
+      align-items: end;
+    }
+
+    .usage-row .field-group {
+      gap: 4px;
+    }
+
+    .usage-row .field-label {
+      overflow: hidden;
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 1px solid #e5b9bd;
+      border-radius: 6px;
+      background: #fff7f8;
+      color: var(--danger);
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--danger);
+      background: var(--danger-soft);
+    }
+
+    .btn {
+      min-height: 44px;
+      padding: 9px 14px;
+    }
+
+    .btn:hover {
+      border-color: #7c8e86;
+      background: var(--surface-soft);
+    }
+
+    .btn-primary {
+      border-color: var(--brand);
+      background: var(--brand);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      border-color: var(--brand-strong);
+      background: var(--brand-strong);
+    }
+
+    .btn-danger {
+      border-color: var(--danger);
+      background: #ffffff;
+      color: var(--danger);
+    }
+
+    .btn-danger:hover {
+      border-color: var(--danger-strong);
+      background: var(--danger-soft);
+    }
+
+    .btn-block {
+      width: 100%;
+    }
+
+    .selection-head {
+      display: flex;
+      min-width: 0;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .selected-count {
+      color: var(--brand-strong);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .color-checks {
+      display: grid;
+      max-height: 310px;
+      min-width: 0;
+      grid-template-columns: repeat(auto-fill, minmax(82px, 1fr));
+      gap: 6px;
+      overflow: auto;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface-soft);
+      scrollbar-gutter: stable;
+    }
+
+    .color-check {
+      display: flex;
+      min-width: 0;
+      min-height: 44px;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: #ffffff;
+    }
+
+    .color-check:has(input:checked) {
+      border-color: var(--brand);
+      background: var(--brand-soft);
+    }
+
+    .color-check input {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      accent-color: var(--brand);
+    }
+
+    .mini-swatch {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+      border: 1px solid rgba(23, 32, 29, 0.28);
+      border-radius: 4px;
+    }
+
+    .check-code {
+      overflow: hidden;
+      font-size: 12px;
+      font-weight: 800;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .form-message {
+      display: none;
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .form-message:not(:empty) {
+      display: block;
+    }
+
+    .form-message.is-error {
+      border: 1px solid #e8a9ae;
+      background: var(--danger-soft);
+      color: var(--danger-strong);
+    }
+
+    .shortage-list {
+      display: grid;
+      gap: 4px;
+      margin: 8px 0 0;
+      padding-left: 20px;
+    }
+
+    .data-actions {
+      display: grid;
+      gap: 8px;
+    }
+
+    .sync-settings {
+      display: grid;
+      gap: 10px;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+
+    .sync-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .sync-fields .is-wide {
+      grid-column: 1 / -1;
+    }
+
+    .conflict-list {
+      display: grid;
+      max-height: 50vh;
+      gap: 10px;
+      overflow: auto;
+    }
+
+    .conflict-row {
+      display: grid;
+      gap: 8px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .conflict-copy {
+      margin: 0;
+      overflow-wrap: anywhere;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .data-actions input[type="file"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+
+    .data-actions label.btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .storage-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .history-panel {
+      margin-top: 14px;
+    }
+
+    .history-list {
+      display: grid;
+      gap: 8px;
+      padding-top: 14px;
+    }
+
+    .history-toolbar {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      padding-top: 14px;
+    }
+
+    .history-row {
+      display: grid;
+      min-width: 0;
+      grid-template-columns: minmax(110px, 0.65fr) minmax(0, 1fr) auto auto;
+      gap: 8px 14px;
+      align-items: center;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .history-row:last-child {
+      border-bottom: 0;
+    }
+
+    .history-title {
+      font-weight: 800;
+    }
+
+    .history-items,
+    .history-time {
+      min-width: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .history-items {
+      overflow-wrap: anywhere;
+    }
+
+    .history-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .history-actions .btn {
+      min-height: 40px;
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+
+    .history-load-more {
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .history-edit-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .history-edit-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(110px, 0.75fr) 44px;
+      gap: 8px;
+      align-items: end;
+    }
+
+    .history-dialog {
+      width: min(640px, calc(100% - 28px));
+      max-height: calc(100vh - 28px);
+      overflow: auto;
+    }
+
+    .history-empty {
+      margin: 0;
+      padding: 20px 4px 4px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    dialog {
+      width: min(420px, calc(100% - 28px));
+      padding: 0;
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      color: var(--ink);
+      box-shadow: 0 24px 70px rgba(23, 32, 29, 0.3);
+    }
+
+    dialog::backdrop {
+      background: rgba(18, 27, 24, 0.58);
+    }
+
+    .dialog-body {
+      padding: 20px;
+    }
+
+    .dialog-body h2 {
+      margin: 0 0 8px;
+      font-size: 20px;
+    }
+
+    .dialog-body p {
+      margin: 0 0 18px;
+      color: var(--muted);
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .toast {
+      position: fixed;
+      z-index: 30;
+      right: 16px;
+      bottom: 16px;
+      max-width: min(360px, calc(100% - 32px));
+      padding: 11px 14px;
+      transform: translateY(18px);
+      border-radius: 8px;
+      background: #173b32;
+      color: #ffffff;
+      box-shadow: 0 12px 35px rgba(23, 32, 29, 0.25);
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    .toast.is-visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    @media (min-width: 760px) {
+      .header-inner {
+        grid-template-columns: minmax(260px, 1fr) minmax(420px, 0.8fr);
+        align-items: center;
+      }
+
+      .inventory-toolbar {
+        grid-template-columns: minmax(240px, 0.58fr) minmax(0, 1fr);
+        align-items: start;
+      }
+
+      .filter-btn,
+      .group-btn {
+        min-height: 44px;
+      }
+    }
+
+    @media (min-width: 1040px) {
+      .layout {
+        grid-template-columns: minmax(0, 1fr) minmax(330px, 390px);
+        align-items: start;
+      }
+
+      .inventory-grid {
+        grid-template-columns: repeat(auto-fill, minmax(142px, 1fr));
+      }
+    }
+
+    @media (max-width: 480px) {
+      .header-inner {
+        padding-block: 16px;
+      }
+
+      .brand-mark {
+        width: 42px;
+        height: 42px;
+        flex-basis: 42px;
+      }
+
+      .stat {
+        padding: 9px 8px;
+      }
+
+      .stat-label {
+        overflow: hidden;
+        font-size: 11px;
+        text-overflow: ellipsis;
+      }
+
+      .panel > summary {
+        min-height: 58px;
+      }
+
+      .inventory-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .bead-card {
+        min-height: 84px;
+        grid-template-columns: 42px minmax(0, 1fr);
+      }
+
+      .swatch {
+        width: 42px;
+        height: 42px;
+      }
+
+      .usage-row {
+        grid-template-columns: minmax(0, 1fr) 44px;
+      }
+
+      .usage-row .quantity-field {
+        grid-column: 1 / 2;
+      }
+
+      .usage-row .remove-usage-row {
+        grid-column: 2;
+        grid-row: 1 / 3;
+        align-self: end;
+      }
+
+      .dialog-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .history-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .history-items {
+        grid-column: 1 / -1;
+        grid-row: 2;
+      }
+
+      .history-time {
+        grid-column: 1;
+      }
+
+      .history-actions {
+        grid-column: 2;
+      }
+
+      .history-toolbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .history-edit-row {
+        grid-template-columns: minmax(0, 1fr) 44px;
+      }
+
+      .history-edit-row .history-edit-quantity {
+        grid-column: 1;
+      }
+
+      .history-edit-row .remove-history-item {
+        grid-column: 2;
+        grid-row: 1 / 3;
+      }
+
+      .sync-fields {
+        grid-template-columns: 1fr;
+      }
+
+      .sync-fields .is-wide {
+        grid-column: auto;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="brand-row">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+        </span>
+        <div class="brand-copy">
+          <p>豆仓</p>
+          <h1>拼豆库存管理</h1>
+        </div>
+        <button class="sync-status" id="sync-status" type="button" aria-live="polite">未配置同步</button>
+      </div>
+      <div class="stats" aria-label="库存统计">
+        <div class="stat">
+          <span class="stat-label">库存总数</span>
+          <strong class="stat-value" id="total-stock">0</strong>
+        </div>
+        <div class="stat is-warning">
+          <span class="stat-label">库存不足</span>
+          <strong class="stat-value" id="low-stock-count">282</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">色号数量</span>
+          <strong class="stat-value" id="color-count">282</strong>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-shell">
+    <div class="notice" id="storage-notice" role="alert" hidden></div>
+    <div class="layout">
+      <details class="panel inventory-panel" id="inventory-panel" open>
+        <summary>
+          <span>库存总览</span>
+          <span class="summary-meta" id="visible-count">282 个色号</span>
+        </summary>
+        <div class="panel-body">
+          <div class="inventory-toolbar">
+            <label class="search-wrap" for="color-search">
+              <span class="sr-only" hidden>搜索色号</span>
+              <input class="search-input" id="color-search" type="search" inputmode="search" autocomplete="off" placeholder="搜索色号，例如 A2" aria-label="搜索色号">
+            </label>
+            <div class="group-filter" id="group-filter" aria-label="按色系筛选"></div>
+          </div>
+          <div class="inventory-grid" id="inventory-grid"></div>
+          <div class="empty-state" id="inventory-empty" hidden>没有匹配的色号</div>
+        </div>
+      </details>
+
+      <aside class="tools-column" aria-label="库存操作">
+        <details class="panel" id="usage-panel">
+          <summary>
+            <span>图纸消耗扣减</span>
+            <span class="summary-meta">批量录入</span>
+          </summary>
+          <div class="panel-body">
+            <form class="form-section" id="usage-form" novalidate>
+              <div class="usage-list" id="usage-list"></div>
+              <button class="btn" id="add-usage-row" type="button">＋ 添加一行</button>
+              <div class="form-message" id="usage-message" role="alert" tabindex="-1"></div>
+              <button class="btn btn-primary btn-block" type="submit">确认扣减</button>
+            </form>
+          </div>
+        </details>
+
+        <details class="panel" id="purchase-panel">
+          <summary>
+            <span>采购入库</span>
+            <span class="summary-meta">色系批量</span>
+          </summary>
+          <div class="panel-body">
+            <form class="form-section" id="purchase-form" novalidate>
+              <div class="field-group">
+                <p class="section-label">选择色系</p>
+                <div class="group-actions" id="purchase-group-actions"></div>
+              </div>
+              <div class="selection-head">
+                <span class="selected-count" id="selected-count">已选择 0 个色号</span>
+                <div class="inline-actions">
+                  <button class="filter-btn" id="select-all" type="button">全选</button>
+                  <button class="filter-btn" id="clear-selection" type="button">清空选择</button>
+                </div>
+              </div>
+              <div class="color-checks" id="color-checks" aria-label="选择单个色号"></div>
+              <div class="field-group">
+                <label class="field-label" for="purchase-quantity">每个色号入库数量</label>
+                <input class="field" id="purchase-quantity" type="number" min="1" max="9007199254740991" step="1" inputmode="numeric" placeholder="输入颗数" required>
+              </div>
+              <div class="form-message" id="purchase-message" role="alert" tabindex="-1"></div>
+              <button class="btn btn-primary btn-block" type="submit">确认入库</button>
+            </form>
+          </div>
+        </details>
+
+        <details class="panel" id="data-panel">
+          <summary>
+            <span>数据管理</span>
+            <span class="summary-meta">备份与恢复</span>
+          </summary>
+          <div class="panel-body">
+            <div class="form-section data-actions">
+              <button class="btn" id="export-backup" type="button">导出 JSON 备份</button>
+              <label class="btn" for="import-file">导入 JSON 备份</label>
+              <input id="import-file" type="file" accept="application/json,.json">
+              <button class="btn btn-danger" id="clear-inventory" type="button">清空全部库存</button>
+              <div class="sync-settings">
+                <p class="section-label">GitHub 私有仓库同步</p>
+                <div class="sync-fields">
+                  <div class="field-group">
+                    <label class="field-label" for="sync-owner">仓库所有者</label>
+                    <input class="field" id="sync-owner" autocomplete="username">
+                  </div>
+                  <div class="field-group">
+                    <label class="field-label" for="sync-repo">仓库名称</label>
+                    <input class="field" id="sync-repo" autocomplete="off">
+                  </div>
+                  <div class="field-group is-wide">
+                    <label class="field-label" for="sync-path">数据文件路径</label>
+                    <input class="field" id="sync-path" value="perler-bead-data.json" autocomplete="off">
+                  </div>
+                  <div class="field-group is-wide">
+                    <label class="field-label" for="sync-token">Fine-grained Token</label>
+                    <input class="field" id="sync-token" type="password" autocomplete="new-password">
+                  </div>
+                </div>
+                <div class="inline-actions">
+                  <button class="btn" id="test-sync" type="button">测试连接</button>
+                  <button class="btn btn-primary" id="save-sync" type="button">保存设置</button>
+                  <button class="btn" id="sync-now" type="button">立即同步</button>
+                  <button class="btn btn-danger" id="disconnect-sync" type="button">断开此设备</button>
+                </div>
+                <div class="form-message" id="sync-message" role="status" aria-live="polite" tabindex="-1"></div>
+              </div>
+              <p class="storage-note">库存优先保存在当前浏览器中</p>
+              <div class="form-message" id="data-message" role="alert" tabindex="-1"></div>
+            </div>
+          </div>
+        </details>
+      </aside>
+    </div>
+
+    <details class="panel history-panel" id="history-panel">
+      <summary>
+        <span>操作历史</span>
+        <span class="summary-meta" id="history-count">0 条记录</span>
+      </summary>
+      <div class="panel-body">
+        <div class="history-toolbar" aria-label="历史筛选">
+          <select class="field" id="history-type-filter" aria-label="按操作类型筛选">
+            <option value="ALL">全部类型</option>
+            <option value="opening">期初库存</option>
+            <option value="purchase">采购入库</option>
+            <option value="consume">图纸消耗</option>
+            <option value="adjustment">库存调整</option>
+          </select>
+          <select class="field" id="history-code-filter" aria-label="按色号筛选">
+            <option value="ALL">全部色号</option>
+          </select>
+          <input class="field" id="history-start-date" type="date" aria-label="开始日期">
+          <input class="field" id="history-end-date" type="date" aria-label="结束日期">
+        </div>
+        <div class="form-message" id="history-message" role="alert" tabindex="-1"></div>
+        <div class="history-list" id="history-list"></div>
+        <p class="history-empty" id="history-empty">暂无操作记录</p>
+        <button class="btn history-load-more" id="history-load-more" type="button" hidden>加载更多</button>
+      </div>
+    </details>
+  </main>
+
+  <dialog class="history-dialog" id="history-dialog" aria-labelledby="history-dialog-title">
+    <form class="dialog-body form-section" id="history-form" novalidate>
+      <h2 id="history-dialog-title">修改历史记录</h2>
+      <div class="field-group">
+        <label class="field-label" for="history-label">记录名称</label>
+        <input class="field" id="history-label" maxlength="80" required>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="history-type">操作类型</label>
+        <select class="field" id="history-type">
+          <option value="opening">期初库存</option>
+          <option value="purchase">采购入库</option>
+          <option value="consume">图纸消耗</option>
+          <option value="adjustment">库存调整</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="history-occurred-at">发生时间</label>
+        <input class="field" id="history-occurred-at" type="datetime-local" required>
+      </div>
+      <div class="history-edit-list" id="history-edit-items"></div>
+      <button class="btn" id="add-history-item" type="button">＋ 添加色号</button>
+      <div class="form-message" id="history-dialog-message" role="alert" tabindex="-1"></div>
+      <div class="dialog-actions">
+        <button class="btn" id="cancel-history" type="button">取消</button>
+        <button class="btn btn-primary" id="save-history" type="submit">保存修改</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="first-sync-dialog" aria-labelledby="first-sync-title">
+    <div class="dialog-body">
+      <h2 id="first-sync-title">选择首次同步方式</h2>
+      <p id="first-sync-summary"></p>
+      <div class="dialog-actions">
+        <button class="btn" type="button" data-first-sync-choice="cloud">使用云端</button>
+        <button class="btn" type="button" data-first-sync-choice="local">使用本地</button>
+        <button class="btn btn-primary" type="button" data-first-sync-choice="merge">合并两边</button>
+        <button class="btn" type="button" data-first-sync-choice="cancel">取消</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="history-dialog" id="sync-conflict-dialog" aria-labelledby="sync-conflict-title">
+    <form class="dialog-body form-section" id="sync-conflict-form">
+      <h2 id="sync-conflict-title">处理同步冲突</h2>
+      <div class="conflict-list" id="sync-conflict-list"></div>
+      <div class="dialog-actions">
+        <button class="btn" id="cancel-conflicts" type="button">取消</button>
+        <button class="btn btn-primary" type="submit">应用选择</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="clear-dialog" aria-labelledby="clear-dialog-title">
+    <div class="dialog-body">
+      <h2 id="clear-dialog-title">确认清空库存</h2>
+      <p>全部 282 个色号的库存将归零，并保留一条可追溯的调整记录。</p>
+      <div class="dialog-actions">
+        <button class="btn" id="cancel-clear" type="button">取消</button>
+        <button class="btn btn-danger" id="confirm-clear" type="button">确认清空</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script id="app-config">
+    /*
+     * 可编辑配置区
+     * lowStockThreshold: 库存预警阈值
+     * colors: 色号、色值及所属色系
+     * groups: 各色系包含的色号
+     */
+    const APP_CONFIG = {
+  "schemaVersion": 1,
+  "storageKey": "perler-bead-warehouse-v2",
+  "legacyStorageKey": "perler-bead-inventory-v1",
+  "deviceStorageKey": "perler-bead-device-id-v1",
+  "syncStorageKey": "perler-bead-sync-v1",
+  "recoveryStorageKey": "perler-bead-recovery-v1",
+  "lowStockThreshold": 50,
+  "colors": [
+    {
+      "code": "A1",
+      "hex": "#FAF5CD",
+      "group": "A"
+    },
+    {
+      "code": "A2",
+      "hex": "#FCFED6",
+      "group": "A"
+    },
+    {
+      "code": "A3",
+      "hex": "#FCFF92",
+      "group": "A"
+    },
+    {
+      "code": "A4",
+      "hex": "#F7EC5C",
+      "group": "A"
+    },
+    {
+      "code": "A5",
+      "hex": "#F0D83A",
+      "group": "A"
+    },
+    {
+      "code": "A6",
+      "hex": "#FDA951",
+      "group": "A"
+    },
+    {
+      "code": "A7",
+      "hex": "#FA8C4F",
+      "group": "A"
+    },
+    {
+      "code": "A8",
+      "hex": "#FDD94D",
+      "group": "A"
+    },
+    {
+      "code": "A9",
+      "hex": "#F99C5F",
+      "group": "A"
+    },
+    {
+      "code": "A10",
+      "hex": "#F47E36",
+      "group": "A"
+    },
+    {
+      "code": "A11",
+      "hex": "#FEDB99",
+      "group": "A"
+    },
+    {
+      "code": "A12",
+      "hex": "#FDA276",
+      "group": "A"
+    },
+    {
+      "code": "A13",
+      "hex": "#FEC667",
+      "group": "A"
+    },
+    {
+      "code": "A14",
+      "hex": "#F85842",
+      "group": "A"
+    },
+    {
+      "code": "A15",
+      "hex": "#FBF65E",
+      "group": "A"
+    },
+    {
+      "code": "A16",
+      "hex": "#FEFF97",
+      "group": "A"
+    },
+    {
+      "code": "A17",
+      "hex": "#FDE173",
+      "group": "A"
+    },
+    {
+      "code": "A18",
+      "hex": "#FCBF80",
+      "group": "A"
+    },
+    {
+      "code": "A19",
+      "hex": "#FD7E77",
+      "group": "A"
+    },
+    {
+      "code": "A20",
+      "hex": "#F9D66E",
+      "group": "A"
+    },
+    {
+      "code": "A21",
+      "hex": "#FAE393",
+      "group": "A"
+    },
+    {
+      "code": "A22",
+      "hex": "#EDF878",
+      "group": "A"
+    },
+    {
+      "code": "A23",
+      "hex": "#E1C9BD",
+      "group": "A"
+    },
+    {
+      "code": "A24",
+      "hex": "#F3F6A9",
+      "group": "A"
+    },
+    {
+      "code": "A25",
+      "hex": "#FFD785",
+      "group": "A"
+    },
+    {
+      "code": "A26",
+      "hex": "#FEC832",
+      "group": "A"
+    },
+    {
+      "code": "B1",
+      "hex": "#DFF139",
+      "group": "B"
+    },
+    {
+      "code": "B2",
+      "hex": "#75CC6E",
+      "group": "B"
+    },
+    {
+      "code": "B3",
+      "hex": "#9FF685",
+      "group": "B"
+    },
+    {
+      "code": "B4",
+      "hex": "#61D045",
+      "group": "B"
+    },
+    {
+      "code": "B5",
+      "hex": "#5BAA71",
+      "group": "B"
+    },
+    {
+      "code": "B6",
+      "hex": "#64E0A4",
+      "group": "B"
+    },
+    {
+      "code": "B7",
+      "hex": "#3EAE7C",
+      "group": "B"
+    },
+    {
+      "code": "B8",
+      "hex": "#1D9B54",
+      "group": "B"
+    },
+    {
+      "code": "B9",
+      "hex": "#2A5037",
+      "group": "B"
+    },
+    {
+      "code": "B10",
+      "hex": "#9AD1BA",
+      "group": "B"
+    },
+    {
+      "code": "B11",
+      "hex": "#627032",
+      "group": "B"
+    },
+    {
+      "code": "B12",
+      "hex": "#1A6E3D",
+      "group": "B"
+    },
+    {
+      "code": "B13",
+      "hex": "#C8E87D",
+      "group": "B"
+    },
+    {
+      "code": "B14",
+      "hex": "#ACE84C",
+      "group": "B"
+    },
+    {
+      "code": "B15",
+      "hex": "#305335",
+      "group": "B"
+    },
+    {
+      "code": "B16",
+      "hex": "#C0ED9C",
+      "group": "B"
+    },
+    {
+      "code": "B17",
+      "hex": "#9EB33E",
+      "group": "B"
+    },
+    {
+      "code": "B18",
+      "hex": "#E6ED4F",
+      "group": "B"
+    },
+    {
+      "code": "B19",
+      "hex": "#26B78E",
+      "group": "B"
+    },
+    {
+      "code": "B20",
+      "hex": "#CAEDCF",
+      "group": "B"
+    },
+    {
+      "code": "B21",
+      "hex": "#176268",
+      "group": "B"
+    },
+    {
+      "code": "B22",
+      "hex": "#0A4241",
+      "group": "B"
+    },
+    {
+      "code": "B23",
+      "hex": "#343B1A",
+      "group": "B"
+    },
+    {
+      "code": "B24",
+      "hex": "#E8FAA6",
+      "group": "B"
+    },
+    {
+      "code": "B25",
+      "hex": "#4E846D",
+      "group": "B"
+    },
+    {
+      "code": "B26",
+      "hex": "#907C35",
+      "group": "B"
+    },
+    {
+      "code": "B27",
+      "hex": "#D0E0AF",
+      "group": "B"
+    },
+    {
+      "code": "B28",
+      "hex": "#9EE5BB",
+      "group": "B"
+    },
+    {
+      "code": "B29",
+      "hex": "#C6DF5F",
+      "group": "B"
+    },
+    {
+      "code": "B30",
+      "hex": "#E3FBB1",
+      "group": "B"
+    },
+    {
+      "code": "B31",
+      "hex": "#B2E694",
+      "group": "B"
+    },
+    {
+      "code": "B32",
+      "hex": "#92AD60",
+      "group": "B"
+    },
+    {
+      "code": "C1",
+      "hex": "#F0FEE4",
+      "group": "C"
+    },
+    {
+      "code": "C2",
+      "hex": "#ABF8FE",
+      "group": "C"
+    },
+    {
+      "code": "C3",
+      "hex": "#9EE0F8",
+      "group": "C"
+    },
+    {
+      "code": "C4",
+      "hex": "#44CDFB",
+      "group": "C"
+    },
+    {
+      "code": "C5",
+      "hex": "#06ABE3",
+      "group": "C"
+    },
+    {
+      "code": "C6",
+      "hex": "#54A7E9",
+      "group": "C"
+    },
+    {
+      "code": "C7",
+      "hex": "#3977CC",
+      "group": "C"
+    },
+    {
+      "code": "C8",
+      "hex": "#0F52BD",
+      "group": "C"
+    },
+    {
+      "code": "C9",
+      "hex": "#3349C3",
+      "group": "C"
+    },
+    {
+      "code": "C10",
+      "hex": "#3DBBE3",
+      "group": "C"
+    },
+    {
+      "code": "C11",
+      "hex": "#2ADED3",
+      "group": "C"
+    },
+    {
+      "code": "C12",
+      "hex": "#1E334E",
+      "group": "C"
+    },
+    {
+      "code": "C13",
+      "hex": "#CDE7FE",
+      "group": "C"
+    },
+    {
+      "code": "C14",
+      "hex": "#D6FDFC",
+      "group": "C"
+    },
+    {
+      "code": "C15",
+      "hex": "#21C5C4",
+      "group": "C"
+    },
+    {
+      "code": "C16",
+      "hex": "#1858A2",
+      "group": "C"
+    },
+    {
+      "code": "C17",
+      "hex": "#02D1F3",
+      "group": "C"
+    },
+    {
+      "code": "C18",
+      "hex": "#213244",
+      "group": "C"
+    },
+    {
+      "code": "C19",
+      "hex": "#18869D",
+      "group": "C"
+    },
+    {
+      "code": "C20",
+      "hex": "#1A70A9",
+      "group": "C"
+    },
+    {
+      "code": "C21",
+      "hex": "#BEDDFC",
+      "group": "C"
+    },
+    {
+      "code": "C22",
+      "hex": "#6BB1BB",
+      "group": "C"
+    },
+    {
+      "code": "C23",
+      "hex": "#C8E2F9",
+      "group": "C"
+    },
+    {
+      "code": "C24",
+      "hex": "#7EC5F9",
+      "group": "C"
+    },
+    {
+      "code": "C25",
+      "hex": "#A9E8E0",
+      "group": "C"
+    },
+    {
+      "code": "C26",
+      "hex": "#42ADD1",
+      "group": "C"
+    },
+    {
+      "code": "C27",
+      "hex": "#D0DEF9",
+      "group": "C"
+    },
+    {
+      "code": "C28",
+      "hex": "#BDCEE8",
+      "group": "C"
+    },
+    {
+      "code": "C29",
+      "hex": "#364A89",
+      "group": "C"
+    },
+    {
+      "code": "D1",
+      "hex": "#ACB7EF",
+      "group": "D"
+    },
+    {
+      "code": "D2",
+      "hex": "#868DD3",
+      "group": "D"
+    },
+    {
+      "code": "D3",
+      "hex": "#3653AF",
+      "group": "D"
+    },
+    {
+      "code": "D4",
+      "hex": "#162C7E",
+      "group": "D"
+    },
+    {
+      "code": "D5",
+      "hex": "#B34EC6",
+      "group": "D"
+    },
+    {
+      "code": "D6",
+      "hex": "#B37BDC",
+      "group": "D"
+    },
+    {
+      "code": "D7",
+      "hex": "#8758A9",
+      "group": "D"
+    },
+    {
+      "code": "D8",
+      "hex": "#E3D2FE",
+      "group": "D"
+    },
+    {
+      "code": "D9",
+      "hex": "#D6BAF5",
+      "group": "D"
+    },
+    {
+      "code": "D10",
+      "hex": "#301A49",
+      "group": "D"
+    },
+    {
+      "code": "D11",
+      "hex": "#BCBAE2",
+      "group": "D"
+    },
+    {
+      "code": "D12",
+      "hex": "#DC99CE",
+      "group": "D"
+    },
+    {
+      "code": "D13",
+      "hex": "#B5038F",
+      "group": "D"
+    },
+    {
+      "code": "D14",
+      "hex": "#882893",
+      "group": "D"
+    },
+    {
+      "code": "D15",
+      "hex": "#2F1E8E",
+      "group": "D"
+    },
+    {
+      "code": "D16",
+      "hex": "#E3E4F0",
+      "group": "D"
+    },
+    {
+      "code": "D17",
+      "hex": "#C7D3F9",
+      "group": "D"
+    },
+    {
+      "code": "D18",
+      "hex": "#9A64B8",
+      "group": "D"
+    },
+    {
+      "code": "D19",
+      "hex": "#D8C2D9",
+      "group": "D"
+    },
+    {
+      "code": "D20",
+      "hex": "#9C34AD",
+      "group": "D"
+    },
+    {
+      "code": "D21",
+      "hex": "#940595",
+      "group": "D"
+    },
+    {
+      "code": "D22",
+      "hex": "#383995",
+      "group": "D"
+    },
+    {
+      "code": "D23",
+      "hex": "#EADBF8",
+      "group": "D"
+    },
+    {
+      "code": "D24",
+      "hex": "#768AE1",
+      "group": "D"
+    },
+    {
+      "code": "D25",
+      "hex": "#4950C2",
+      "group": "D"
+    },
+    {
+      "code": "D26",
+      "hex": "#D6C6EB",
+      "group": "D"
+    },
+    {
+      "code": "E1",
+      "hex": "#F6D4CB",
+      "group": "E"
+    },
+    {
+      "code": "E2",
+      "hex": "#FCC1DD",
+      "group": "E"
+    },
+    {
+      "code": "E3",
+      "hex": "#FFBACA",
+      "group": "E"
+    },
+    {
+      "code": "E4",
+      "hex": "#E9639E",
+      "group": "E"
+    },
+    {
+      "code": "E5",
+      "hex": "#F1559F",
+      "group": "E"
+    },
+    {
+      "code": "E6",
+      "hex": "#EC4072",
+      "group": "E"
+    },
+    {
+      "code": "E7",
+      "hex": "#C63674",
+      "group": "E"
+    },
+    {
+      "code": "E8",
+      "hex": "#FDDBE9",
+      "group": "E"
+    },
+    {
+      "code": "E9",
+      "hex": "#E575C7",
+      "group": "E"
+    },
+    {
+      "code": "E10",
+      "hex": "#D33997",
+      "group": "E"
+    },
+    {
+      "code": "E11",
+      "hex": "#F7DAD4",
+      "group": "E"
+    },
+    {
+      "code": "E12",
+      "hex": "#F893BF",
+      "group": "E"
+    },
+    {
+      "code": "E13",
+      "hex": "#B5026A",
+      "group": "E"
+    },
+    {
+      "code": "E14",
+      "hex": "#FAD4BF",
+      "group": "E"
+    },
+    {
+      "code": "E15",
+      "hex": "#F5C9CA",
+      "group": "E"
+    },
+    {
+      "code": "E16",
+      "hex": "#FBF4EC",
+      "group": "E"
+    },
+    {
+      "code": "E17",
+      "hex": "#F7E3EC",
+      "group": "E"
+    },
+    {
+      "code": "E18",
+      "hex": "#FBC8D8",
+      "group": "E"
+    },
+    {
+      "code": "E19",
+      "hex": "#F6BBD1",
+      "group": "E"
+    },
+    {
+      "code": "E20",
+      "hex": "#D7C6CE",
+      "group": "E"
+    },
+    {
+      "code": "E21",
+      "hex": "#C09DA4",
+      "group": "E"
+    },
+    {
+      "code": "E22",
+      "hex": "#B58B9F",
+      "group": "E"
+    },
+    {
+      "code": "E23",
+      "hex": "#937D8A",
+      "group": "E"
+    },
+    {
+      "code": "E24",
+      "hex": "#DEBEE5",
+      "group": "E"
+    },
+    {
+      "code": "F1",
+      "hex": "#FF9280",
+      "group": "F"
+    },
+    {
+      "code": "F2",
+      "hex": "#FF5B59",
+      "group": "F"
+    },
+    {
+      "code": "F3",
+      "hex": "#EF4D3E",
+      "group": "F"
+    },
+    {
+      "code": "F4",
+      "hex": "#F92B40",
+      "group": "F"
+    },
+    {
+      "code": "F5",
+      "hex": "#E30328",
+      "group": "F"
+    },
+    {
+      "code": "F6",
+      "hex": "#913635",
+      "group": "F"
+    },
+    {
+      "code": "F7",
+      "hex": "#911932",
+      "group": "F"
+    },
+    {
+      "code": "F8",
+      "hex": "#BB0126",
+      "group": "F"
+    },
+    {
+      "code": "F9",
+      "hex": "#E0677A",
+      "group": "F"
+    },
+    {
+      "code": "F10",
+      "hex": "#874628",
+      "group": "F"
+    },
+    {
+      "code": "F11",
+      "hex": "#592323",
+      "group": "F"
+    },
+    {
+      "code": "F12",
+      "hex": "#F8516D",
+      "group": "F"
+    },
+    {
+      "code": "F13",
+      "hex": "#F45C45",
+      "group": "F"
+    },
+    {
+      "code": "F14",
+      "hex": "#FCADB2",
+      "group": "F"
+    },
+    {
+      "code": "F15",
+      "hex": "#D50527",
+      "group": "F"
+    },
+    {
+      "code": "F16",
+      "hex": "#F8C0A9",
+      "group": "F"
+    },
+    {
+      "code": "F17",
+      "hex": "#E89B7D",
+      "group": "F"
+    },
+    {
+      "code": "F18",
+      "hex": "#D07E4A",
+      "group": "F"
+    },
+    {
+      "code": "F19",
+      "hex": "#BE454A",
+      "group": "F"
+    },
+    {
+      "code": "F20",
+      "hex": "#C69495",
+      "group": "F"
+    },
+    {
+      "code": "F21",
+      "hex": "#F2B8C6",
+      "group": "F"
+    },
+    {
+      "code": "F22",
+      "hex": "#F7C3D0",
+      "group": "F"
+    },
+    {
+      "code": "F23",
+      "hex": "#EC806D",
+      "group": "F"
+    },
+    {
+      "code": "F24",
+      "hex": "#E09DAF",
+      "group": "F"
+    },
+    {
+      "code": "F25",
+      "hex": "#E84854",
+      "group": "F"
+    },
+    {
+      "code": "G1",
+      "hex": "#FFE4D3",
+      "group": "G"
+    },
+    {
+      "code": "G2",
+      "hex": "#FCC6AC",
+      "group": "G"
+    },
+    {
+      "code": "G3",
+      "hex": "#F1C4A5",
+      "group": "G"
+    },
+    {
+      "code": "G4",
+      "hex": "#DCB387",
+      "group": "G"
+    },
+    {
+      "code": "G5",
+      "hex": "#E7B34E",
+      "group": "G"
+    },
+    {
+      "code": "G6",
+      "hex": "#E3A014",
+      "group": "G"
+    },
+    {
+      "code": "G7",
+      "hex": "#985C3A",
+      "group": "G"
+    },
+    {
+      "code": "G8",
+      "hex": "#713D2F",
+      "group": "G"
+    },
+    {
+      "code": "G9",
+      "hex": "#E4B685",
+      "group": "G"
+    },
+    {
+      "code": "G10",
+      "hex": "#DA8C42",
+      "group": "G"
+    },
+    {
+      "code": "G11",
+      "hex": "#DAC898",
+      "group": "G"
+    },
+    {
+      "code": "G12",
+      "hex": "#FEC993",
+      "group": "G"
+    },
+    {
+      "code": "G13",
+      "hex": "#B2714B",
+      "group": "G"
+    },
+    {
+      "code": "G14",
+      "hex": "#8B684C",
+      "group": "G"
+    },
+    {
+      "code": "G15",
+      "hex": "#F6F8E3",
+      "group": "G"
+    },
+    {
+      "code": "G16",
+      "hex": "#F2D8C1",
+      "group": "G"
+    },
+    {
+      "code": "G17",
+      "hex": "#423338",
+      "group": "G"
+    },
+    {
+      "code": "G18",
+      "hex": "#FFE4D6",
+      "group": "G"
+    },
+    {
+      "code": "G19",
+      "hex": "#DD7D41",
+      "group": "G"
+    },
+    {
+      "code": "G20",
+      "hex": "#A5452F",
+      "group": "G"
+    },
+    {
+      "code": "G21",
+      "hex": "#B38561",
+      "group": "G"
+    },
+    {
+      "code": "H1",
+      "hex": "#FBFBFB",
+      "group": "H"
+    },
+    {
+      "code": "H2",
+      "hex": "#FFFFFF",
+      "group": "H"
+    },
+    {
+      "code": "H3",
+      "hex": "#B4B4B4",
+      "group": "H"
+    },
+    {
+      "code": "H4",
+      "hex": "#878787",
+      "group": "H"
+    },
+    {
+      "code": "H5",
+      "hex": "#464648",
+      "group": "H"
+    },
+    {
+      "code": "H6",
+      "hex": "#2C2C2C",
+      "group": "H"
+    },
+    {
+      "code": "H7",
+      "hex": "#010101",
+      "group": "H"
+    },
+    {
+      "code": "H8",
+      "hex": "#E7D6DC",
+      "group": "H"
+    },
+    {
+      "code": "H9",
+      "hex": "#EFEDEE",
+      "group": "H"
+    },
+    {
+      "code": "H10",
+      "hex": "#ECEAEB",
+      "group": "H"
+    },
+    {
+      "code": "H11",
+      "hex": "#CDCDCD",
+      "group": "H"
+    },
+    {
+      "code": "H12",
+      "hex": "#FDF6EE",
+      "group": "H"
+    },
+    {
+      "code": "H13",
+      "hex": "#F4EFD1",
+      "group": "H"
+    },
+    {
+      "code": "H14",
+      "hex": "#CED7D4",
+      "group": "H"
+    },
+    {
+      "code": "H15",
+      "hex": "#98A6A6",
+      "group": "H"
+    },
+    {
+      "code": "H16",
+      "hex": "#1B1213",
+      "group": "H"
+    },
+    {
+      "code": "H17",
+      "hex": "#F0EEEF",
+      "group": "H"
+    },
+    {
+      "code": "H18",
+      "hex": "#FCFFF8",
+      "group": "H"
+    },
+    {
+      "code": "H19",
+      "hex": "#F2EEE5",
+      "group": "H"
+    },
+    {
+      "code": "H20",
+      "hex": "#96A09F",
+      "group": "H"
+    },
+    {
+      "code": "H21",
+      "hex": "#F8FBE6",
+      "group": "H"
+    },
+    {
+      "code": "H22",
+      "hex": "#CACAD2",
+      "group": "H"
+    },
+    {
+      "code": "H23",
+      "hex": "#9B9C94",
+      "group": "H"
+    },
+    {
+      "code": "M1",
+      "hex": "#BBC6B6",
+      "group": "M"
+    },
+    {
+      "code": "M2",
+      "hex": "#909994",
+      "group": "M"
+    },
+    {
+      "code": "M3",
+      "hex": "#697E80",
+      "group": "M"
+    },
+    {
+      "code": "M4",
+      "hex": "#E0D4BC",
+      "group": "M"
+    },
+    {
+      "code": "M5",
+      "hex": "#D0CBAE",
+      "group": "M"
+    },
+    {
+      "code": "M6",
+      "hex": "#B0AA86",
+      "group": "M"
+    },
+    {
+      "code": "M7",
+      "hex": "#B0A796",
+      "group": "M"
+    },
+    {
+      "code": "M8",
+      "hex": "#AE8082",
+      "group": "M"
+    },
+    {
+      "code": "M9",
+      "hex": "#A88764",
+      "group": "M"
+    },
+    {
+      "code": "M10",
+      "hex": "#C6B2BB",
+      "group": "M"
+    },
+    {
+      "code": "M11",
+      "hex": "#9D7693",
+      "group": "M"
+    },
+    {
+      "code": "M12",
+      "hex": "#644B51",
+      "group": "M"
+    },
+    {
+      "code": "M13",
+      "hex": "#C79266",
+      "group": "M"
+    },
+    {
+      "code": "M14",
+      "hex": "#C37463",
+      "group": "M"
+    },
+    {
+      "code": "M15",
+      "hex": "#747D7A",
+      "group": "M"
+    },
+    {
+      "code": "P1",
+      "hex": "#F9F9F9",
+      "group": "P"
+    },
+    {
+      "code": "P2",
+      "hex": "#ABABAB",
+      "group": "P"
+    },
+    {
+      "code": "P3",
+      "hex": "#B6DBAF",
+      "group": "P"
+    },
+    {
+      "code": "P4",
+      "hex": "#FEA2A3",
+      "group": "P"
+    },
+    {
+      "code": "P5",
+      "hex": "#EB903F",
+      "group": "P"
+    },
+    {
+      "code": "P6",
+      "hex": "#63CEA2",
+      "group": "P"
+    },
+    {
+      "code": "P7",
+      "hex": "#E79273",
+      "group": "P"
+    },
+    {
+      "code": "P8",
+      "hex": "#ECDB59",
+      "group": "P"
+    },
+    {
+      "code": "P9",
+      "hex": "#DBD9DA",
+      "group": "P"
+    },
+    {
+      "code": "P10",
+      "hex": "#DBC7EA",
+      "group": "P"
+    },
+    {
+      "code": "P11",
+      "hex": "#F1E9D4",
+      "group": "P"
+    },
+    {
+      "code": "P12",
+      "hex": "#E9EDEE",
+      "group": "P"
+    },
+    {
+      "code": "P13",
+      "hex": "#ADCBF1",
+      "group": "P"
+    },
+    {
+      "code": "P14",
+      "hex": "#337BAD",
+      "group": "P"
+    },
+    {
+      "code": "P15",
+      "hex": "#668575",
+      "group": "P"
+    },
+    {
+      "code": "P16",
+      "hex": "#FDC24E",
+      "group": "P"
+    },
+    {
+      "code": "P17",
+      "hex": "#FDA42E",
+      "group": "P"
+    },
+    {
+      "code": "P18",
+      "hex": "#FEBDA7",
+      "group": "P"
+    },
+    {
+      "code": "P19",
+      "hex": "#FFDEE9",
+      "group": "P"
+    },
+    {
+      "code": "P20",
+      "hex": "#FCBFD1",
+      "group": "P"
+    },
+    {
+      "code": "P21",
+      "hex": "#E8BEC2",
+      "group": "P"
+    },
+    {
+      "code": "P22",
+      "hex": "#DFAAA4",
+      "group": "P"
+    },
+    {
+      "code": "P23",
+      "hex": "#A3656A",
+      "group": "P"
+    },
+    {
+      "code": "R1",
+      "hex": "#D40E1F",
+      "group": "R"
+    },
+    {
+      "code": "R2",
+      "hex": "#F13484",
+      "group": "R"
+    },
+    {
+      "code": "R3",
+      "hex": "#FB852B",
+      "group": "R"
+    },
+    {
+      "code": "R4",
+      "hex": "#F8ED33",
+      "group": "R"
+    },
+    {
+      "code": "R5",
+      "hex": "#32C958",
+      "group": "R"
+    },
+    {
+      "code": "R6",
+      "hex": "#1EBA93",
+      "group": "R"
+    },
+    {
+      "code": "R7",
+      "hex": "#1D779C",
+      "group": "R"
+    },
+    {
+      "code": "R8",
+      "hex": "#1960C8",
+      "group": "R"
+    },
+    {
+      "code": "R9",
+      "hex": "#945AB1",
+      "group": "R"
+    },
+    {
+      "code": "R10",
+      "hex": "#F8DA54",
+      "group": "R"
+    },
+    {
+      "code": "R11",
+      "hex": "#FCECF7",
+      "group": "R"
+    },
+    {
+      "code": "R12",
+      "hex": "#D8D4D3",
+      "group": "R"
+    },
+    {
+      "code": "R13",
+      "hex": "#56534E",
+      "group": "R"
+    },
+    {
+      "code": "R14",
+      "hex": "#A3E7DC",
+      "group": "R"
+    },
+    {
+      "code": "R15",
+      "hex": "#78CEE7",
+      "group": "R"
+    },
+    {
+      "code": "R16",
+      "hex": "#3FCDCE",
+      "group": "R"
+    },
+    {
+      "code": "R17",
+      "hex": "#4E8379",
+      "group": "R"
+    },
+    {
+      "code": "R18",
+      "hex": "#7DCA9C",
+      "group": "R"
+    },
+    {
+      "code": "R19",
+      "hex": "#C8E664",
+      "group": "R"
+    },
+    {
+      "code": "R20",
+      "hex": "#E3CCBA",
+      "group": "R"
+    },
+    {
+      "code": "R21",
+      "hex": "#A17140",
+      "group": "R"
+    },
+    {
+      "code": "R22",
+      "hex": "#6B372C",
+      "group": "R"
+    },
+    {
+      "code": "R23",
+      "hex": "#F6BB6F",
+      "group": "R"
+    },
+    {
+      "code": "R24",
+      "hex": "#F3C6C0",
+      "group": "R"
+    },
+    {
+      "code": "R25",
+      "hex": "#C76A62",
+      "group": "R"
+    },
+    {
+      "code": "R26",
+      "hex": "#D093BC",
+      "group": "R"
+    },
+    {
+      "code": "R27",
+      "hex": "#E58EAE",
+      "group": "R"
+    },
+    {
+      "code": "R28",
+      "hex": "#877C97",
+      "group": "R"
+    },
+    {
+      "code": "T1",
+      "hex": "#FCFDFF",
+      "group": "T"
+    },
+    {
+      "code": "Y1",
+      "hex": "#FF6FB7",
+      "group": "Y"
+    },
+    {
+      "code": "Y2",
+      "hex": "#FDB583",
+      "group": "Y"
+    },
+    {
+      "code": "Y3",
+      "hex": "#D8FCA4",
+      "group": "Y"
+    },
+    {
+      "code": "Y4",
+      "hex": "#91DAFB",
+      "group": "Y"
+    },
+    {
+      "code": "Y5",
+      "hex": "#E987EA",
+      "group": "Y"
+    },
+    {
+      "code": "Y6",
+      "hex": "#F7D4E8",
+      "group": "Y"
+    },
+    {
+      "code": "Y7",
+      "hex": "#F1FA7D",
+      "group": "Y"
+    },
+    {
+      "code": "Y8",
+      "hex": "#5EE88C",
+      "group": "Y"
+    },
+    {
+      "code": "Y9",
+      "hex": "#F8F5FE",
+      "group": "Y"
+    }
+  ],
+  "groups": {
+    "A": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5",
+      "A6",
+      "A7",
+      "A8",
+      "A9",
+      "A10",
+      "A11",
+      "A12",
+      "A13",
+      "A14",
+      "A15",
+      "A16",
+      "A17",
+      "A18",
+      "A19",
+      "A20",
+      "A21",
+      "A22",
+      "A23",
+      "A24",
+      "A25",
+      "A26"
+    ],
+    "B": [
+      "B1",
+      "B2",
+      "B3",
+      "B4",
+      "B5",
+      "B6",
+      "B7",
+      "B8",
+      "B9",
+      "B10",
+      "B11",
+      "B12",
+      "B13",
+      "B14",
+      "B15",
+      "B16",
+      "B17",
+      "B18",
+      "B19",
+      "B20",
+      "B21",
+      "B22",
+      "B23",
+      "B24",
+      "B25",
+      "B26",
+      "B27",
+      "B28",
+      "B29",
+      "B30",
+      "B31",
+      "B32"
+    ],
+    "C": [
+      "C1",
+      "C2",
+      "C3",
+      "C4",
+      "C5",
+      "C6",
+      "C7",
+      "C8",
+      "C9",
+      "C10",
+      "C11",
+      "C12",
+      "C13",
+      "C14",
+      "C15",
+      "C16",
+      "C17",
+      "C18",
+      "C19",
+      "C20",
+      "C21",
+      "C22",
+      "C23",
+      "C24",
+      "C25",
+      "C26",
+      "C27",
+      "C28",
+      "C29"
+    ],
+    "D": [
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "D5",
+      "D6",
+      "D7",
+      "D8",
+      "D9",
+      "D10",
+      "D11",
+      "D12",
+      "D13",
+      "D14",
+      "D15",
+      "D16",
+      "D17",
+      "D18",
+      "D19",
+      "D20",
+      "D21",
+      "D22",
+      "D23",
+      "D24",
+      "D25",
+      "D26"
+    ],
+    "E": [
+      "E1",
+      "E2",
+      "E3",
+      "E4",
+      "E5",
+      "E6",
+      "E7",
+      "E8",
+      "E9",
+      "E10",
+      "E11",
+      "E12",
+      "E13",
+      "E14",
+      "E15",
+      "E16",
+      "E17",
+      "E18",
+      "E19",
+      "E20",
+      "E21",
+      "E22",
+      "E23",
+      "E24"
+    ],
+    "F": [
+      "F1",
+      "F2",
+      "F3",
+      "F4",
+      "F5",
+      "F6",
+      "F7",
+      "F8",
+      "F9",
+      "F10",
+      "F11",
+      "F12",
+      "F13",
+      "F14",
+      "F15",
+      "F16",
+      "F17",
+      "F18",
+      "F19",
+      "F20",
+      "F21",
+      "F22",
+      "F23",
+      "F24",
+      "F25"
+    ],
+    "G": [
+      "G1",
+      "G2",
+      "G3",
+      "G4",
+      "G5",
+      "G6",
+      "G7",
+      "G8",
+      "G9",
+      "G10",
+      "G11",
+      "G12",
+      "G13",
+      "G14",
+      "G15",
+      "G16",
+      "G17",
+      "G18",
+      "G19",
+      "G20",
+      "G21"
+    ],
+    "H": [
+      "H1",
+      "H2",
+      "H3",
+      "H4",
+      "H5",
+      "H6",
+      "H7",
+      "H8",
+      "H9",
+      "H10",
+      "H11",
+      "H12",
+      "H13",
+      "H14",
+      "H15",
+      "H16",
+      "H17",
+      "H18",
+      "H19",
+      "H20",
+      "H21",
+      "H22",
+      "H23"
+    ],
+    "M": [
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "M5",
+      "M6",
+      "M7",
+      "M8",
+      "M9",
+      "M10",
+      "M11",
+      "M12",
+      "M13",
+      "M14",
+      "M15"
+    ],
+    "P": [
+      "P1",
+      "P2",
+      "P3",
+      "P4",
+      "P5",
+      "P6",
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "P11",
+      "P12",
+      "P13",
+      "P14",
+      "P15",
+      "P16",
+      "P17",
+      "P18",
+      "P19",
+      "P20",
+      "P21",
+      "P22",
+      "P23"
+    ],
+    "R": [
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5",
+      "R6",
+      "R7",
+      "R8",
+      "R9",
+      "R10",
+      "R11",
+      "R12",
+      "R13",
+      "R14",
+      "R15",
+      "R16",
+      "R17",
+      "R18",
+      "R19",
+      "R20",
+      "R21",
+      "R22",
+      "R23",
+      "R24",
+      "R25",
+      "R26",
+      "R27",
+      "R28"
+    ],
+    "T": [
+      "T1"
+    ],
+    "Y": [
+      "Y1",
+      "Y2",
+      "Y3",
+      "Y4",
+      "Y5",
+      "Y6",
+      "Y7",
+      "Y8",
+      "Y9"
+    ]
+  }
+};
+    window.APP_CONFIG = APP_CONFIG;
+  </script>
+
+  <script id="inventory-core">
+    (() => {
+      'use strict';
+
+      const isPlainObject = (value) => (
+        value !== null && typeof value === 'object' && !Array.isArray(value)
+      );
+
+      function positiveInteger(value, label = '数量') {
+        const normalized = typeof value === 'string' ? value.trim() : value;
+        if (normalized === '' || (typeof normalized === 'string' && !/^\d+$/.test(normalized))) {
+          throw new Error(`${label}必须是大于 0 的正整数`);
+        }
+        const number = Number(normalized);
+        if (!Number.isInteger(number) || number <= 0) {
+          throw new Error(`${label}必须是大于 0 的正整数`);
+        }
+        if (!Number.isSafeInteger(number)) {
+          throw new Error(`${label}必须是安全整数`);
+        }
+        return number;
+      }
+
+      function createEmptyInventory(colors) {
+        return Object.fromEntries(colors.map(({ code }) => [code, 0]));
+      }
+
+      function normalizeInventory(savedInventory, colors) {
+        const source = isPlainObject(savedInventory) ? savedInventory : {};
+        return Object.fromEntries(colors.map(({ code }) => {
+          const value = source[code];
+          return [code, Number.isSafeInteger(value) && value >= 0 ? value : 0];
+        }));
+      }
+
+      function addStock(inventory, selectedCodes, quantity) {
+        if (!Array.isArray(selectedCodes) || selectedCodes.length === 0) {
+          throw new Error('请至少选择一个色号');
+        }
+        const amount = positiveInteger(quantity, '采购数量');
+        const uniqueCodes = [...new Set(selectedCodes.map((code) => String(code).trim().toUpperCase()))];
+        const next = { ...inventory };
+        for (const code of uniqueCodes) {
+          if (!Object.prototype.hasOwnProperty.call(inventory, code)) {
+            throw new Error(`未知色号：${code}`);
+          }
+          const updated = next[code] + amount;
+          if (!Number.isSafeInteger(updated)) {
+            throw new Error(`${code} 入库后的库存超过安全整数范围`);
+          }
+          next[code] = updated;
+        }
+        return next;
+      }
+
+      function mergeUsageRows(rows) {
+        if (!Array.isArray(rows) || rows.length === 0) {
+          throw new Error('请至少添加一条消耗记录');
+        }
+        const usage = {};
+        rows.forEach((row, index) => {
+          const code = String(row?.code ?? '').trim().toUpperCase();
+          if (!code) {
+            throw new Error(`第 ${index + 1} 行请选择色号`);
+          }
+          const amount = positiveInteger(row?.quantity, `第 ${index + 1} 行消耗数量`);
+          const merged = (usage[code] || 0) + amount;
+          if (!Number.isSafeInteger(merged)) {
+            throw new Error(`${code} 的合计消耗超过安全整数范围`);
+          }
+          usage[code] = merged;
+        });
+        return usage;
+      }
+
+      function consumeStock(inventory, usage) {
+        if (!isPlainObject(usage) || Object.keys(usage).length === 0) {
+          throw new Error('请至少添加一条消耗记录');
+        }
+        const normalizedUsage = {};
+        for (const [rawCode, rawQuantity] of Object.entries(usage)) {
+          const code = String(rawCode).trim().toUpperCase();
+          if (!Object.prototype.hasOwnProperty.call(inventory, code)) {
+            throw new Error(`未知色号：${code}`);
+          }
+          normalizedUsage[code] = positiveInteger(rawQuantity, `${code} 消耗数量`);
+        }
+
+        const shortages = Object.entries(normalizedUsage)
+          .filter(([code, required]) => inventory[code] < required)
+          .map(([code, required]) => ({
+            code,
+            available: inventory[code],
+            required,
+            missing: required - inventory[code]
+          }));
+
+        if (shortages.length > 0) {
+          return { ok: false, inventory: { ...inventory }, shortages };
+        }
+
+        const next = { ...inventory };
+        for (const [code, required] of Object.entries(normalizedUsage)) {
+          next[code] -= required;
+        }
+        return { ok: true, inventory: next, shortages: [] };
+      }
+
+      function isLowStock(quantity, threshold) {
+        return quantity < threshold;
+      }
+
+      function cloneGroups(groups) {
+        return Object.fromEntries(
+          Object.entries(groups).map(([name, codes]) => [name, [...codes]])
+        );
+      }
+
+      function createBackup(inventory, config) {
+        return {
+          schemaVersion: config.schemaVersion,
+          exportedAt: new Date().toISOString(),
+          settings: {
+            lowStockThreshold: config.lowStockThreshold,
+            groups: cloneGroups(config.groups)
+          },
+          inventory: normalizeInventory(inventory, config.colors)
+        };
+      }
+
+      function validateGroups(groups, config) {
+        if (!isPlainObject(groups)) {
+          throw new Error('备份中的色系配置无效');
+        }
+        const knownCodes = new Set(config.colors.map(({ code }) => code));
+        const seen = new Set();
+        const reservedNames = new Set(['__proto__', 'prototype', 'constructor']);
+        const normalized = Object.create(null);
+        for (const [name, codes] of Object.entries(groups)) {
+          if (reservedNames.has(name)) {
+            throw new Error(`备份色系不能使用保留名称：${name}`);
+          }
+          if (!name || !Array.isArray(codes) || codes.length === 0) {
+            throw new Error('备份中的色系配置无效');
+          }
+          normalized[name] = codes.map((rawCode) => {
+            const code = String(rawCode).trim().toUpperCase();
+            if (!knownCodes.has(code)) {
+              throw new Error(`备份色系包含未知色号：${code}`);
+            }
+            if (seen.has(code)) {
+              throw new Error(`备份色系重复包含色号：${code}`);
+            }
+            seen.add(code);
+            return code;
+          });
+        }
+        for (const { code, group } of config.colors) {
+          if (seen.has(code)) continue;
+          if (!normalized[group]) normalized[group] = [];
+          normalized[group].push(code);
+          seen.add(code);
+        }
+        return normalized;
+      }
+
+      function parseBackup(text, config) {
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error('备份文件不是有效的 JSON');
+        }
+        if (!isPlainObject(data)) {
+          throw new Error('备份文件结构无效');
+        }
+        if (data.schemaVersion !== config.schemaVersion) {
+          throw new Error('备份版本不受支持');
+        }
+        if (!isPlainObject(data.inventory)) {
+          throw new Error('备份中的库存数据无效');
+        }
+        if (data.settings !== undefined && !isPlainObject(data.settings)) {
+          throw new Error('备份中的设置数据无效');
+        }
+
+        const knownCodes = new Set(config.colors.map(({ code }) => code));
+        for (const [rawCode, quantity] of Object.entries(data.inventory)) {
+          const code = String(rawCode).trim().toUpperCase();
+          if (rawCode !== code) {
+            throw new Error(`备份色号必须使用标准格式：${rawCode}`);
+          }
+          if (!knownCodes.has(code)) {
+            throw new Error(`备份包含未知色号：${code}`);
+          }
+          if (!Number.isInteger(quantity) || quantity < 0) {
+            throw new Error(`${code} 的库存必须是非负整数`);
+          }
+          if (!Number.isSafeInteger(quantity)) {
+            throw new Error(`${code} 的库存必须是安全整数`);
+          }
+        }
+
+        const threshold = data.settings?.lowStockThreshold ?? config.lowStockThreshold;
+        if (!Number.isSafeInteger(threshold) || threshold < 0) {
+          throw new Error('备份中的预警阈值必须是非负整数');
+        }
+        const groups = data.settings?.groups
+          ? validateGroups(data.settings.groups, config)
+          : cloneGroups(config.groups);
+
+        return {
+          schemaVersion: config.schemaVersion,
+          settings: { lowStockThreshold: threshold, groups },
+          inventory: normalizeInventory(data.inventory, config.colors)
+        };
+      }
+
+      window.InventoryCore = Object.freeze({
+        createEmptyInventory,
+        normalizeInventory,
+        addStock,
+        mergeUsageRows,
+        consumeStock,
+        isLowStock,
+        createBackup,
+        parseBackup
+      });
+    })();
+  </script>
+
+  <script id="ledger-core">
+    (() => {
+      'use strict';
+
+      const WAREHOUSE_SCHEMA_VERSION = 2;
+      const TRANSACTION_TYPES = new Set(['opening', 'purchase', 'consume', 'adjustment']);
+      const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+      class LedgerValidationError extends Error {
+        constructor(message, failure = null) {
+          super(message);
+          this.name = 'LedgerValidationError';
+          this.failure = failure;
+        }
+      }
+
+      const isPlainObject = (value) => (
+        value !== null && typeof value === 'object' && !Array.isArray(value)
+      );
+
+      const clone = (value) => JSON.parse(JSON.stringify(value));
+
+      function assertUuid(value, label) {
+        if (typeof value !== 'string' || !UUID_PATTERN.test(value)) {
+          throw new LedgerValidationError(`${label}不是有效 UUID`);
+        }
+        return value;
+      }
+
+      function assertIso(value, label) {
+        if (typeof value !== 'string') {
+          throw new LedgerValidationError(`${label}不是有效时间`);
+        }
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime()) || parsed.toISOString() !== value) {
+          throw new LedgerValidationError(`${label}不是标准 ISO 时间`);
+        }
+        return value;
+      }
+
+      function normalizeSettings(settings, config) {
+        const parsed = window.InventoryCore.parseBackup(JSON.stringify({
+          schemaVersion: config.schemaVersion,
+          settings,
+          inventory: {}
+        }), config);
+        return parsed.settings;
+      }
+
+      function validateTransaction(transaction, config) {
+        if (!isPlainObject(transaction)) {
+          throw new LedgerValidationError('流水记录结构无效');
+        }
+        const id = assertUuid(transaction.id, '流水 ID');
+        if (!TRANSACTION_TYPES.has(transaction.type)) {
+          throw new LedgerValidationError(`流水类型无效：${transaction.type}`);
+        }
+        const label = typeof transaction.label === 'string' && transaction.label.trim()
+          ? transaction.label.trim().slice(0, 80)
+          : transaction.type;
+        if (!isPlainObject(transaction.items) || Object.keys(transaction.items).length === 0) {
+          throw new LedgerValidationError('流水必须包含至少一个色号');
+        }
+        const knownCodes = new Set(config.colors.map(({ code }) => code));
+        const items = {};
+        for (const [rawCode, quantity] of Object.entries(transaction.items)) {
+          const code = String(rawCode).trim().toUpperCase();
+          if (rawCode !== code || !knownCodes.has(code)) {
+            throw new LedgerValidationError(`流水包含非标准色号：${rawCode}`);
+          }
+          if (transaction.type === 'adjustment') {
+            if (!Number.isSafeInteger(quantity) || quantity === 0) {
+              throw new LedgerValidationError(`${code} 调整数必须是非零安全整数`);
+            }
+          } else if (!Number.isSafeInteger(quantity) || quantity <= 0) {
+            throw new LedgerValidationError(`${code} 数量必须是正安全整数`);
+          }
+          items[code] = quantity;
+        }
+        const deletedAt = transaction.deletedAt === null
+          ? null
+          : assertIso(transaction.deletedAt, '删除时间');
+        return {
+          id,
+          type: transaction.type,
+          label,
+          items,
+          occurredAt: assertIso(transaction.occurredAt, '发生时间'),
+          createdAt: assertIso(transaction.createdAt, '创建时间'),
+          updatedAt: assertIso(transaction.updatedAt, '修改时间'),
+          deviceId: assertUuid(transaction.deviceId, '设备 ID'),
+          deletedAt
+        };
+      }
+
+      function validateWarehouse(data, config) {
+        if (!isPlainObject(data) || data.schemaVersion !== WAREHOUSE_SCHEMA_VERSION) {
+          throw new LedgerValidationError('豆仓数据版本不受支持');
+        }
+        if (!Array.isArray(data.transactions)) {
+          throw new LedgerValidationError('流水列表结构无效');
+        }
+        const seen = new Set();
+        const transactions = data.transactions.map((transaction) => {
+          const normalized = validateTransaction(transaction, config);
+          if (seen.has(normalized.id)) {
+            throw new LedgerValidationError(`流水 ID 重复：${normalized.id}`);
+          }
+          seen.add(normalized.id);
+          return normalized;
+        });
+        return {
+          schemaVersion: WAREHOUSE_SCHEMA_VERSION,
+          warehouseId: assertUuid(data.warehouseId, '豆仓 ID'),
+          settings: normalizeSettings(data.settings, config),
+          transactions,
+          updatedAt: assertIso(data.updatedAt, '豆仓修改时间')
+        };
+      }
+
+      function compareTransactions(left, right) {
+        return left.occurredAt.localeCompare(right.occurredAt)
+          || left.createdAt.localeCompare(right.createdAt)
+          || left.id.localeCompare(right.id);
+      }
+
+      function replay(data, config) {
+        const warehouse = validateWarehouse(data, config);
+        const inventory = window.InventoryCore.createEmptyInventory(config.colors);
+        const transactions = warehouse.transactions
+          .filter(({ deletedAt }) => deletedAt === null)
+          .slice()
+          .sort(compareTransactions);
+
+        for (const transaction of transactions) {
+          const deltas = Object.entries(transaction.items).map(([code, quantity]) => [
+            code,
+            transaction.type === 'consume'
+              ? -quantity
+              : transaction.type === 'adjustment' ? quantity : quantity
+          ]);
+          for (const [code, delta] of deltas) {
+            const next = inventory[code] + delta;
+            if (!Number.isSafeInteger(next)) {
+              return {
+                ok: false,
+                inventory: null,
+                failure: {
+                  kind: 'overflow',
+                  transactionId: transaction.id,
+                  occurredAt: transaction.occurredAt,
+                  code,
+                  available: inventory[code],
+                  delta
+                }
+              };
+            }
+            if (next < 0) {
+              const required = -delta;
+              return {
+                ok: false,
+                inventory: null,
+                failure: {
+                  kind: 'shortage',
+                  transactionId: transaction.id,
+                  occurredAt: transaction.occurredAt,
+                  code,
+                  available: inventory[code],
+                  required,
+                  missing: required - inventory[code]
+                }
+              };
+            }
+          }
+          for (const [code, delta] of deltas) inventory[code] += delta;
+        }
+        return { ok: true, inventory, failure: null };
+      }
+
+      function throwReplayFailure(result) {
+        if (result.ok) return;
+        const failure = result.failure;
+        const message = failure.kind === 'shortage'
+          ? `${failure.code} 在 ${failure.occurredAt} 库存不足，还差 ${failure.missing} 颗`
+          : `${failure.code} 在 ${failure.occurredAt} 的库存超出安全整数范围`;
+        throw new LedgerValidationError(message, failure);
+      }
+
+      function createEmptyWarehouse(config, deviceId, now, idFactory) {
+        assertUuid(deviceId, '设备 ID');
+        assertIso(now, '创建时间');
+        const warehouse = {
+          schemaVersion: WAREHOUSE_SCHEMA_VERSION,
+          warehouseId: assertUuid(idFactory(), '豆仓 ID'),
+          settings: {
+            lowStockThreshold: config.lowStockThreshold,
+            groups: clone(config.groups)
+          },
+          transactions: [],
+          updatedAt: now
+        };
+        return validateWarehouse(warehouse, config);
+      }
+
+      function createTransaction({ id, type, label, items, occurredAt, deviceId, now }) {
+        return {
+          id,
+          type,
+          label,
+          items: clone(items),
+          occurredAt,
+          createdAt: now,
+          updatedAt: now,
+          deviceId,
+          deletedAt: null
+        };
+      }
+
+      function migrateV1(v1, config, deviceId, now, idFactory) {
+        const parsed = window.InventoryCore.parseBackup(JSON.stringify({
+          ...clone(v1),
+          schemaVersion: config.schemaVersion
+        }), config);
+        const warehouse = createEmptyWarehouse(config, deviceId, now, idFactory);
+        warehouse.settings = parsed.settings;
+        const items = Object.fromEntries(
+          Object.entries(parsed.inventory).filter(([, quantity]) => quantity > 0)
+        );
+        if (Object.keys(items).length > 0) {
+          warehouse.transactions.push(createTransaction({
+            id: idFactory(),
+            type: 'opening',
+            label: '旧版库存迁移',
+            items,
+            occurredAt: now,
+            deviceId,
+            now
+          }));
+        }
+        return validateWarehouse(warehouse, config);
+      }
+
+      function appendTransaction(warehouse, transaction, config) {
+        const normalized = validateTransaction(transaction, config);
+        const candidate = {
+          ...clone(warehouse),
+          transactions: [...warehouse.transactions.map(clone), normalized],
+          updatedAt: normalized.updatedAt
+        };
+        const validated = validateWarehouse(candidate, config);
+        throwReplayFailure(replay(validated, config));
+        return validated;
+      }
+
+      function replaceTransaction(warehouse, transaction, config) {
+        const normalized = validateTransaction(transaction, config);
+        let found = false;
+        const candidate = {
+          ...clone(warehouse),
+          transactions: warehouse.transactions.map((existing) => {
+            if (existing.id !== normalized.id) return clone(existing);
+            found = true;
+            return normalized;
+          }),
+          updatedAt: normalized.updatedAt
+        };
+        if (!found) throw new LedgerValidationError(`找不到流水：${normalized.id}`);
+        const validated = validateWarehouse(candidate, config);
+        throwReplayFailure(replay(validated, config));
+        return validated;
+      }
+
+      function deleteTransaction(warehouse, id, deviceId, now, config) {
+        assertUuid(id, '流水 ID');
+        assertUuid(deviceId, '设备 ID');
+        assertIso(now, '删除时间');
+        const existing = warehouse.transactions.find((transaction) => transaction.id === id);
+        if (!existing) throw new LedgerValidationError(`找不到流水：${id}`);
+        return replaceTransaction(warehouse, {
+          ...clone(existing),
+          updatedAt: now,
+          deviceId,
+          deletedAt: now
+        }, config);
+      }
+
+      function createZeroAdjustment(warehouse, config, { id, deviceId, now }) {
+        const result = replay(warehouse, config);
+        throwReplayFailure(result);
+        const items = Object.fromEntries(
+          Object.entries(result.inventory)
+            .filter(([, quantity]) => quantity !== 0)
+            .map(([code, quantity]) => [code, -quantity])
+        );
+        if (Object.keys(items).length === 0) return null;
+        return createTransaction({
+          id,
+          type: 'adjustment',
+          label: '库存归零调整',
+          items,
+          occurredAt: now,
+          deviceId,
+          now
+        });
+      }
+
+      window.LedgerCore = Object.freeze({
+        WAREHOUSE_SCHEMA_VERSION,
+        LedgerValidationError,
+        createEmptyWarehouse,
+        createTransaction,
+        migrateV1,
+        validateWarehouse,
+        replay,
+        appendTransaction,
+        replaceTransaction,
+        deleteTransaction,
+        createZeroAdjustment
+      });
+    })();
+  </script>
+
+  <script id="sync-core">
+    (() => {
+      'use strict';
+
+      class GitHubSyncError extends Error {
+        constructor(message, { status = null, category = 'github' } = {}) {
+          super(message);
+          this.name = 'GitHubSyncError';
+          this.status = status;
+          this.category = category;
+        }
+      }
+
+      function encodeUtf8Base64(text) {
+        const bytes = new TextEncoder().encode(String(text));
+        let binary = '';
+        const chunkSize = 0x8000;
+        for (let index = 0; index < bytes.length; index += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+        }
+        return btoa(binary);
+      }
+
+      function decodeUtf8Base64(base64) {
+        const binary = atob(String(base64).replace(/\s/g, ''));
+        const bytes = new Uint8Array(binary.length);
+        for (let index = 0; index < binary.length; index += 1) {
+          bytes[index] = binary.charCodeAt(index);
+        }
+        return new TextDecoder().decode(bytes);
+      }
+
+      function requiredText(value, label) {
+        const normalized = String(value ?? '').trim();
+        if (!normalized || normalized === '.' || normalized === '..') {
+          throw new GitHubSyncError(`请输入有效的${label}`, { category: 'configuration' });
+        }
+        return normalized;
+      }
+
+      function sanitizeSyncConfig(config) {
+        const owner = requiredText(config?.owner, '仓库所有者');
+        const repo = requiredText(config?.repo, '仓库名称');
+        const token = requiredText(config?.token, '访问令牌');
+        const path = requiredText(config?.path, '同步文件路径').replace(/\\/g, '/');
+        const segments = path.split('/');
+        if (path.startsWith('/') || path.endsWith('/')
+          || segments.some((segment) => !segment || segment === '.' || segment === '..')) {
+          throw new GitHubSyncError('请输入有效的同步文件路径', { category: 'configuration' });
+        }
+        return { owner, repo, path, token };
+      }
+
+      function errorCategory(status, response) {
+        if (status === 401) return 'authentication';
+        if (status === 403) {
+          return response?.headers?.get?.('x-ratelimit-remaining') === '0'
+            ? 'rate-limit'
+            : 'permission';
+        }
+        if (status === 404) return 'not-found';
+        if (status === 409 || status === 422) return 'conflict';
+        if (status === 429) return 'rate-limit';
+        return 'github';
+      }
+
+      class GitHubClient {
+        constructor(config, { fetchImpl, timeoutMs = 15000 } = {}) {
+          this.config = sanitizeSyncConfig(config);
+          this.fetchImpl = fetchImpl || window.fetch.bind(window);
+          this.timeoutMs = timeoutMs;
+          const owner = encodeURIComponent(this.config.owner);
+          const repo = encodeURIComponent(this.config.repo);
+          this.repoUrl = `https://api.github.com/repos/${owner}/${repo}`;
+          const encodedPath = this.config.path.split('/').map(encodeURIComponent).join('/');
+          this.fileUrl = `${this.repoUrl}/contents/${encodedPath}`;
+        }
+
+        headers() {
+          return {
+            Authorization: `Bearer ${this.config.token}`,
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28'
+          };
+        }
+
+        async fetch(url, options) {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+          try {
+            return await this.fetchImpl(url, { ...options, signal: controller.signal });
+          } catch (error) {
+            if (error?.name === 'AbortError') {
+              throw new GitHubSyncError('连接 GitHub 超时', { category: 'timeout' });
+            }
+            throw new GitHubSyncError('无法连接 GitHub，请检查网络', { category: 'network' });
+          } finally {
+            clearTimeout(timer);
+          }
+        }
+
+        async responseError(response) {
+          let message = '';
+          try {
+            const body = await response.json();
+            message = typeof body?.message === 'string' ? body.message : '';
+          } catch {
+            message = '';
+          }
+          const status = response.status;
+          const detail = message ? `：${message}` : '';
+          throw new GitHubSyncError(`GitHub 请求失败 (${status})${detail}`, {
+            status,
+            category: errorCategory(status, response)
+          });
+        }
+
+        async testConnection() {
+          const response = await this.fetch(this.repoUrl, {
+            method: 'GET', headers: this.headers()
+          });
+          if (!response.ok) await this.responseError(response);
+          const data = await response.json();
+          return { ok: true, private: Boolean(data.private) };
+        }
+
+        async getFile() {
+          const response = await this.fetch(this.fileUrl, {
+            method: 'GET', headers: this.headers()
+          });
+          if (response.status === 404) return { exists: false, sha: null, data: null };
+          if (!response.ok) await this.responseError(response);
+          const body = await response.json();
+          try {
+            return {
+              exists: true,
+              sha: body.sha,
+              data: JSON.parse(decodeUtf8Base64(body.content))
+            };
+          } catch {
+            throw new GitHubSyncError('云端同步文件不是有效的 JSON', {
+              status: response.status,
+              category: 'invalid-data'
+            });
+          }
+        }
+
+        async putFile(data, sha = null) {
+          const body = {
+            message: '同步拼豆库存',
+            content: encodeUtf8Base64(JSON.stringify(data, null, 2))
+          };
+          if (sha !== null) body.sha = sha;
+          const response = await this.fetch(this.fileUrl, {
+            method: 'PUT',
+            headers: { ...this.headers(), 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          if (!response.ok) await this.responseError(response);
+          const result = await response.json();
+          return { sha: result?.content?.sha || result?.commit?.sha || null };
+        }
+      }
+
+      const cloneValue = (value) => (
+        value === undefined ? undefined : JSON.parse(JSON.stringify(value))
+      );
+
+      function canonicalize(value) {
+        if (Array.isArray(value)) return value.map(canonicalize);
+        if (value && typeof value === 'object') {
+          return Object.fromEntries(
+            Object.keys(value).sort().map((key) => [key, canonicalize(value[key])])
+          );
+        }
+        return value;
+      }
+
+      const stableJson = (value) => (
+        value === undefined ? '__undefined__' : JSON.stringify(canonicalize(value))
+      );
+
+      function resolveThreeWay(kind, id, base, local, remote, conflicts) {
+        if (stableJson(local) === stableJson(remote)) return cloneValue(local);
+        if (stableJson(local) === stableJson(base)) return cloneValue(remote);
+        if (stableJson(remote) === stableJson(base)) return cloneValue(local);
+        conflicts.push({
+          kind,
+          id,
+          base: cloneValue(base) ?? null,
+          local: cloneValue(local) ?? null,
+          remote: cloneValue(remote) ?? null
+        });
+        return cloneValue(base ?? local ?? remote);
+      }
+
+      const MergeCore = Object.freeze({
+        threeWayMerge(base, local, remote) {
+          const conflicts = [];
+          const baseId = base?.warehouseId ?? null;
+          if (!local || !remote || local.warehouseId !== remote.warehouseId
+            || (baseId && (local.warehouseId !== baseId || remote.warehouseId !== baseId))) {
+            conflicts.push({
+              kind: 'warehouse', id: 'warehouseId',
+              base: baseId, local: local?.warehouseId ?? null, remote: remote?.warehouseId ?? null
+            });
+            return { merged: null, conflicts };
+          }
+
+          const baseTransactions = new Map((base?.transactions || []).map((item) => [item.id, item]));
+          const localTransactions = new Map(local.transactions.map((item) => [item.id, item]));
+          const remoteTransactions = new Map(remote.transactions.map((item) => [item.id, item]));
+          const ids = [...new Set([
+            ...baseTransactions.keys(), ...localTransactions.keys(), ...remoteTransactions.keys()
+          ])].sort();
+          const transactions = [];
+          for (const id of ids) {
+            const resolved = resolveThreeWay(
+              'transaction', id,
+              baseTransactions.get(id), localTransactions.get(id), remoteTransactions.get(id),
+              conflicts
+            );
+            if (resolved !== undefined) transactions.push(resolved);
+          }
+
+          const settings = resolveThreeWay(
+            'settings', 'settings', base?.settings, local.settings, remote.settings, conflicts
+          );
+          const updateTimes = [base?.updatedAt, local.updatedAt, remote.updatedAt]
+            .filter(Boolean).sort();
+          const merged = {
+            schemaVersion: 2,
+            warehouseId: local.warehouseId,
+            settings,
+            transactions,
+            updatedAt: updateTimes[updateTimes.length - 1]
+          };
+          return { merged, conflicts };
+        },
+        stableJson
+      });
+
+      class SyncManager {
+        constructor({
+          store,
+          clientFactory = (config) => new GitHubClient(config),
+          isOnline = () => typeof navigator === 'undefined' || navigator.onLine,
+          validateWarehouse = (warehouse) => window.LedgerCore.validateWarehouse(warehouse, window.APP_CONFIG),
+          replay = (warehouse) => window.LedgerCore.replay(warehouse, window.APP_CONFIG),
+          onStatus = () => {},
+          onFirstSync = null,
+          onConflicts = null
+        }) {
+          this.store = store;
+          this.clientFactory = clientFactory;
+          this.isOnline = isOnline;
+          this.validateWarehouse = validateWarehouse;
+          this.replay = replay;
+          this.onStatus = onStatus;
+          this.onFirstSync = onFirstSync;
+          this.onConflicts = onConflicts;
+          this.syncConfig = store.loadSyncConfig?.() || null;
+          this.running = null;
+          this.dirty = false;
+        }
+
+        configure(config) {
+          const normalized = sanitizeSyncConfig(config);
+          const previous = this.syncConfig;
+          const sameTarget = previous
+            && previous.owner === normalized.owner
+            && previous.repo === normalized.repo
+            && previous.path === normalized.path;
+          this.syncConfig = {
+            ...normalized,
+            pending: true,
+            lastRemoteSha: sameTarget ? previous.lastRemoteSha ?? null : null,
+            lastSyncedData: sameTarget ? previous.lastSyncedData ?? null : null
+          };
+          this.store.saveSyncConfig(this.syncConfig);
+          this.onStatus({ state: 'pending', message: '等待同步' });
+          return cloneValue(this.syncConfig);
+        }
+
+        disconnect() {
+          this.syncConfig = null;
+          this.store.saveSyncConfig(null);
+          this.onStatus({ state: 'unconfigured', message: '未配置同步' });
+        }
+
+        async testConnection(config = this.syncConfig) {
+          if (!config) throw new GitHubSyncError('尚未配置 GitHub 同步', { category: 'configuration' });
+          return this.clientFactory(config).testConnection();
+        }
+
+        markPending() {
+          if (!this.syncConfig) return false;
+          this.syncConfig = { ...this.syncConfig, pending: true };
+          this.store.saveSyncConfig(this.syncConfig);
+          this.onStatus({ state: 'pending', message: '等待同步' });
+          return true;
+        }
+
+        validated(data) {
+          let warehouse;
+          try {
+            warehouse = this.validateWarehouse(data);
+          } catch (error) {
+            throw new GitHubSyncError(`同步数据无效：${error.message}`, { category: 'invalid-data' });
+          }
+          const replayed = this.replay(warehouse);
+          if (!replayed?.ok) {
+            const failure = replayed?.failure;
+            const message = failure?.kind === 'shortage'
+              ? `${failure.code} 库存不足，还差 ${failure.missing} 颗`
+              : '同步数据无法重算库存';
+            const error = new GitHubSyncError(message, { category: 'invalid-data' });
+            error.failure = cloneValue(failure);
+            throw error;
+          }
+          return warehouse;
+        }
+
+        resolveMerged(merged, conflicts, choices) {
+          if (conflicts.length === 0) return merged;
+          if (!choices) {
+            throw new GitHubSyncError('同步数据存在冲突', { category: 'merge-conflict' });
+          }
+          const result = cloneValue(merged);
+          const transactions = new Map((result.transactions || []).map((item) => [item.id, item]));
+          conflicts.forEach((conflict, index) => {
+            const key = `${conflict.kind}:${conflict.id}`;
+            const choice = Array.isArray(choices) ? choices[index] : choices[key];
+            if (choice !== 'local' && choice !== 'remote') {
+              throw new GitHubSyncError('请处理每一项同步冲突', { category: 'merge-conflict' });
+            }
+            const selected = cloneValue(conflict[choice]);
+            if (conflict.kind === 'transaction') {
+              if (selected) transactions.set(conflict.id, selected);
+              else transactions.delete(conflict.id);
+            } else if (conflict.kind === 'settings') {
+              result.settings = selected;
+            } else {
+              throw new GitHubSyncError('两个豆仓无法自动合并', { category: 'warehouse-conflict' });
+            }
+          });
+          result.transactions = [...transactions.values()].sort((left, right) => left.id.localeCompare(right.id));
+          return result;
+        }
+
+        async chooseFirstSync(local, remote) {
+          if (!this.onFirstSync) {
+            throw new GitHubSyncError('首次同步需要选择保留方式', { category: 'first-sync' });
+          }
+          const choice = await this.onFirstSync({
+            local: cloneValue(local), remote: cloneValue(remote)
+          });
+          if (!['cloud', 'local', 'merge'].includes(choice)) {
+            throw new GitHubSyncError('已取消首次同步', { category: 'cancelled' });
+          }
+          return choice;
+        }
+
+        async resolveConflicts(merged, conflicts) {
+          if (conflicts.length === 0) return merged;
+          if (!this.onConflicts) {
+            throw new GitHubSyncError('同步数据存在冲突', { category: 'merge-conflict' });
+          }
+          const choices = await this.onConflicts({
+            conflicts: cloneValue(conflicts), merged: cloneValue(merged)
+          });
+          return this.resolveMerged(merged, conflicts, choices);
+        }
+
+        async finish(warehouse, sha) {
+          const validated = this.validated(warehouse);
+          this.store.saveWarehouse(validated);
+          this.syncConfig = {
+            ...this.syncConfig,
+            pending: false,
+            lastRemoteSha: sha,
+            lastSyncedData: cloneValue(validated)
+          };
+          this.store.saveSyncConfig(this.syncConfig);
+          this.onStatus({ state: 'synced', message: '已同步' });
+          return { status: 'synced', warehouse: cloneValue(validated), sha };
+        }
+
+        async syncOnce(client) {
+          const local = this.validated(this.store.getWarehouse());
+          const remoteFile = await client.getFile();
+          if (!remoteFile.exists) {
+            const uploaded = await client.putFile(local, null);
+            return this.finish(local, uploaded.sha);
+          }
+
+          const remote = this.validated(remoteFile.data);
+          const base = this.syncConfig.lastSyncedData;
+          let selected;
+          if (!base) {
+            if (local.transactions.length === 0) {
+              return this.finish(remote, remoteFile.sha);
+            }
+            if (remote.transactions.length === 0) {
+              selected = local;
+            } else {
+              const choice = await this.chooseFirstSync(local, remote);
+              if (choice === 'cloud') return this.finish(remote, remoteFile.sha);
+              if (choice === 'local') {
+                selected = local;
+              } else {
+                const remoteForMerge = { ...remote, warehouseId: local.warehouseId };
+                const emptyBase = {
+                  ...cloneValue(local), transactions: [], updatedAt: local.updatedAt
+                };
+                const result = MergeCore.threeWayMerge(emptyBase, local, remoteForMerge);
+                selected = await this.resolveConflicts(result.merged, result.conflicts);
+              }
+            }
+          } else {
+            const normalizedBase = this.validated(base);
+            const result = MergeCore.threeWayMerge(normalizedBase, local, remote);
+            selected = await this.resolveConflicts(result.merged, result.conflicts);
+          }
+
+          selected = this.validated(selected);
+          if (stableJson(selected) === stableJson(remote)) {
+            return this.finish(selected, remoteFile.sha);
+          }
+          const uploaded = await client.putFile(selected, remoteFile.sha);
+          return this.finish(selected, uploaded.sha);
+        }
+
+        async runSync() {
+          if (!this.syncConfig) {
+            return { status: 'unconfigured' };
+          }
+          if (!this.isOnline()) {
+            this.markPending();
+            this.onStatus({ state: 'offline', message: '离线，等待同步' });
+            return { status: 'offline' };
+          }
+          this.onStatus({ state: 'syncing', message: '正在同步' });
+          const client = this.clientFactory(this.syncConfig);
+          let lastError;
+          for (let attempt = 0; attempt < 3; attempt += 1) {
+            try {
+              return await this.syncOnce(client);
+            } catch (error) {
+              lastError = error;
+              if (error?.category !== 'conflict' || attempt === 2) break;
+            }
+          }
+          this.markPending();
+          this.onStatus({
+            state: lastError?.category === 'merge-conflict' ? 'conflict' : 'failed',
+            message: lastError?.message || '同步失败'
+          });
+          throw lastError;
+        }
+
+        syncNow() {
+          if (this.running) {
+            this.dirty = true;
+            return this.running;
+          }
+          this.running = (async () => {
+            let result;
+            do {
+              this.dirty = false;
+              result = await this.runSync();
+            } while (this.dirty);
+            return result;
+          })().finally(() => {
+            this.running = null;
+          });
+          return this.running;
+        }
+      }
+
+      window.SyncCore = Object.freeze({
+        GitHubSyncError,
+        GitHubClient,
+        encodeUtf8Base64,
+        decodeUtf8Base64,
+        sanitizeSyncConfig,
+        MergeCore,
+        SyncManager
+      });
+    })();
+  </script>
+
+  <script id="app-controller">
+    (() => {
+      'use strict';
+
+      const { APP_CONFIG, InventoryCore, LedgerCore } = window;
+      const { GitHubClient, SyncManager } = window.SyncCore;
+      const numberFormat = new Intl.NumberFormat('zh-CN');
+      const colorByCode = new Map(APP_CONFIG.colors.map((color) => [color.code, color]));
+      const elements = {
+        totalStock: document.querySelector('#total-stock'),
+        lowStockCount: document.querySelector('#low-stock-count'),
+        colorCount: document.querySelector('#color-count'),
+        visibleCount: document.querySelector('#visible-count'),
+        storageNotice: document.querySelector('#storage-notice'),
+        search: document.querySelector('#color-search'),
+        groupFilter: document.querySelector('#group-filter'),
+        inventoryGrid: document.querySelector('#inventory-grid'),
+        inventoryEmpty: document.querySelector('#inventory-empty'),
+        usageForm: document.querySelector('#usage-form'),
+        usageList: document.querySelector('#usage-list'),
+        addUsageRow: document.querySelector('#add-usage-row'),
+        usageMessage: document.querySelector('#usage-message'),
+        purchaseForm: document.querySelector('#purchase-form'),
+        purchaseGroupActions: document.querySelector('#purchase-group-actions'),
+        selectedCount: document.querySelector('#selected-count'),
+        colorChecks: document.querySelector('#color-checks'),
+        purchaseQuantity: document.querySelector('#purchase-quantity'),
+        purchaseMessage: document.querySelector('#purchase-message'),
+        selectAll: document.querySelector('#select-all'),
+        clearSelection: document.querySelector('#clear-selection'),
+        exportBackup: document.querySelector('#export-backup'),
+        importFile: document.querySelector('#import-file'),
+        dataPanel: document.querySelector('#data-panel'),
+        clearInventory: document.querySelector('#clear-inventory'),
+        dataMessage: document.querySelector('#data-message'),
+        syncStatus: document.querySelector('#sync-status'),
+        syncOwner: document.querySelector('#sync-owner'),
+        syncRepo: document.querySelector('#sync-repo'),
+        syncPath: document.querySelector('#sync-path'),
+        syncToken: document.querySelector('#sync-token'),
+        testSync: document.querySelector('#test-sync'),
+        saveSync: document.querySelector('#save-sync'),
+        syncNow: document.querySelector('#sync-now'),
+        disconnectSync: document.querySelector('#disconnect-sync'),
+        syncMessage: document.querySelector('#sync-message'),
+        firstSyncDialog: document.querySelector('#first-sync-dialog'),
+        firstSyncSummary: document.querySelector('#first-sync-summary'),
+        syncConflictDialog: document.querySelector('#sync-conflict-dialog'),
+        syncConflictForm: document.querySelector('#sync-conflict-form'),
+        syncConflictList: document.querySelector('#sync-conflict-list'),
+        cancelConflicts: document.querySelector('#cancel-conflicts'),
+        clearDialog: document.querySelector('#clear-dialog'),
+        cancelClear: document.querySelector('#cancel-clear'),
+        confirmClear: document.querySelector('#confirm-clear'),
+        historyCount: document.querySelector('#history-count'),
+        historyList: document.querySelector('#history-list'),
+        historyEmpty: document.querySelector('#history-empty'),
+        historyMessage: document.querySelector('#history-message'),
+        historyTypeFilter: document.querySelector('#history-type-filter'),
+        historyCodeFilter: document.querySelector('#history-code-filter'),
+        historyStartDate: document.querySelector('#history-start-date'),
+        historyEndDate: document.querySelector('#history-end-date'),
+        historyLoadMore: document.querySelector('#history-load-more'),
+        historyDialog: document.querySelector('#history-dialog'),
+        historyForm: document.querySelector('#history-form'),
+        historyLabel: document.querySelector('#history-label'),
+        historyType: document.querySelector('#history-type'),
+        historyOccurredAt: document.querySelector('#history-occurred-at'),
+        historyEditItems: document.querySelector('#history-edit-items'),
+        addHistoryItem: document.querySelector('#add-history-item'),
+        cancelHistory: document.querySelector('#cancel-history'),
+        historyDialogMessage: document.querySelector('#history-dialog-message'),
+        toast: document.querySelector('#toast')
+      };
+
+      const defaultSettings = () => ({
+        lowStockThreshold: APP_CONFIG.lowStockThreshold,
+        groups: Object.fromEntries(
+          Object.entries(APP_CONFIG.groups).map(([name, codes]) => [name, [...codes]])
+        )
+      });
+
+      const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const randomUuid = () => crypto.randomUUID();
+      const nowIso = () => new Date().toISOString();
+
+      const WarehouseStore = {
+        loadDeviceId() {
+          const stored = localStorage.getItem(APP_CONFIG.deviceStorageKey);
+          if (stored && UUID_PATTERN.test(stored)) return stored;
+          const deviceId = randomUuid();
+          localStorage.setItem(APP_CONFIG.deviceStorageKey, deviceId);
+          return deviceId;
+        },
+
+        load() {
+          let deviceId;
+          try {
+            deviceId = this.loadDeviceId();
+            const v2Raw = localStorage.getItem(APP_CONFIG.storageKey);
+            let warehouse;
+            if (v2Raw) {
+              warehouse = LedgerCore.validateWarehouse(JSON.parse(v2Raw), APP_CONFIG);
+            } else {
+              const legacyRaw = localStorage.getItem(APP_CONFIG.legacyStorageKey);
+              const now = nowIso();
+              if (legacyRaw) {
+                warehouse = LedgerCore.migrateV1(
+                  JSON.parse(legacyRaw), APP_CONFIG, deviceId, now, randomUuid
+                );
+              } else {
+                warehouse = LedgerCore.createEmptyWarehouse(
+                  APP_CONFIG, deviceId, now, randomUuid
+                );
+              }
+              this.save(warehouse);
+            }
+            const replayed = LedgerCore.replay(warehouse, APP_CONFIG);
+            if (!replayed.ok) {
+              throw new LedgerCore.LedgerValidationError('本地流水无法重放', replayed.failure);
+            }
+            return {
+              warehouse,
+              inventory: replayed.inventory,
+              settings: warehouse.settings,
+              deviceId,
+              error: ''
+            };
+          } catch (error) {
+            const fallbackDeviceId = deviceId && UUID_PATTERN.test(deviceId) ? deviceId : randomUuid();
+            const warehouse = LedgerCore.createEmptyWarehouse(
+              APP_CONFIG, fallbackDeviceId, nowIso(), randomUuid
+            );
+            return {
+              warehouse,
+              inventory: InventoryCore.createEmptyInventory(APP_CONFIG.colors),
+              settings: defaultSettings(),
+              deviceId: fallbackDeviceId,
+              error: `本地数据无法读取：${error.message}。当前显示临时的零库存，原数据未被覆盖。请先导入备份或清空库存。`
+            };
+          }
+        },
+
+        save(warehouse) {
+          localStorage.setItem(APP_CONFIG.storageKey, JSON.stringify(warehouse));
+        },
+
+        saveSyncConfig(config) {
+          if (config === null) {
+            localStorage.removeItem(APP_CONFIG.syncStorageKey);
+          } else {
+            localStorage.setItem(APP_CONFIG.syncStorageKey, JSON.stringify(config));
+          }
+        },
+
+        loadSyncConfig() {
+          const raw = localStorage.getItem(APP_CONFIG.syncStorageKey);
+          return raw ? JSON.parse(raw) : null;
+        }
+      };
+
+      const loaded = WarehouseStore.load();
+      const state = {
+        warehouse: loaded.warehouse,
+        inventory: loaded.inventory,
+        settings: loaded.settings,
+        deviceId: loaded.deviceId,
+        search: '',
+        activeGroup: 'ALL',
+        selectedCodes: new Set(),
+        historyFilters: { type: 'ALL', code: 'ALL', startDate: '', endDate: '', limit: 50 },
+        editingTransactionId: null,
+        storageLocked: Boolean(loaded.error),
+        toastTimer: null
+      };
+      let syncManager = null;
+      let syncTimer = null;
+      let firstSyncResolver = null;
+      let firstSyncPayload = null;
+      let conflictResolver = null;
+
+      if (loaded.error) {
+        elements.storageNotice.textContent = loaded.error;
+        elements.storageNotice.hidden = false;
+      }
+
+      function showToast(message) {
+        clearTimeout(state.toastTimer);
+        elements.toast.textContent = message;
+        elements.toast.classList.add('is-visible');
+        state.toastTimer = setTimeout(() => {
+          elements.toast.classList.remove('is-visible');
+        }, 2200);
+      }
+
+      function scheduleSync(delay = 700) {
+        if (!syncManager || !syncManager.markPending()) return;
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(() => {
+          syncManager.syncNow().catch(() => {});
+        }, delay);
+      }
+
+      function setMessage(element, message = '', { error = true, html = false } = {}) {
+        element.className = 'form-message';
+        if (error) element.classList.add('is-error');
+        if (html) {
+          element.replaceChildren(message);
+        } else {
+          element.textContent = message;
+        }
+        if (message && error) {
+          element.focus({ preventScroll: true });
+        }
+      }
+
+      function setMutationLock(locked) {
+        state.storageLocked = locked;
+        document.querySelectorAll('#usage-form button, #usage-form input, #usage-form select, #purchase-form button, #purchase-form input').forEach((control) => {
+          control.disabled = locked;
+        });
+        if (!locked) refreshUsageRemoveButtons();
+      }
+
+      function commitWarehouse(candidate, successMessage, errorElement = elements.storageNotice) {
+        try {
+          const warehouse = LedgerCore.validateWarehouse(candidate, APP_CONFIG);
+          const replayed = LedgerCore.replay(warehouse, APP_CONFIG);
+          if (!replayed.ok) {
+            const { code, occurredAt, missing } = replayed.failure;
+            throw new Error(`${code} 在 ${occurredAt} 库存不足，还差 ${missing} 颗`);
+          }
+          WarehouseStore.save(warehouse);
+          state.warehouse = warehouse;
+          state.inventory = replayed.inventory;
+          state.settings = warehouse.settings;
+          setMutationLock(false);
+          elements.storageNotice.hidden = true;
+          elements.storageNotice.textContent = '';
+        } catch (error) {
+          const message = `保存失败：${error.message}。库存未更改。`;
+          elements.storageNotice.textContent = message;
+          elements.storageNotice.hidden = false;
+          if (errorElement !== elements.storageNotice) setMessage(errorElement, message);
+          return false;
+        }
+        renderDashboard();
+        renderInventory();
+        renderHistory();
+        showToast(successMessage);
+        scheduleSync();
+        return true;
+      }
+
+      function renderDashboard() {
+        const quantities = Object.values(state.inventory);
+        const total = quantities.reduce((sum, quantity) => sum + BigInt(quantity), 0n);
+        const lowCount = quantities.filter((quantity) => (
+          InventoryCore.isLowStock(quantity, state.settings.lowStockThreshold)
+        )).length;
+        elements.totalStock.textContent = numberFormat.format(total);
+        elements.lowStockCount.textContent = numberFormat.format(lowCount);
+        elements.colorCount.textContent = numberFormat.format(APP_CONFIG.colors.length);
+      }
+
+      function isInActiveGroup(code) {
+        return state.activeGroup === 'ALL' || state.settings.groups[state.activeGroup]?.includes(code);
+      }
+
+      function renderInventory() {
+        const query = state.search.trim().toUpperCase();
+        const colors = APP_CONFIG.colors.filter(({ code }) => (
+          code.includes(query) && isInActiveGroup(code)
+        ));
+
+        const fragment = document.createDocumentFragment();
+        for (const { code, hex } of colors) {
+          const quantity = state.inventory[code];
+          const low = InventoryCore.isLowStock(quantity, state.settings.lowStockThreshold);
+          const card = document.createElement('article');
+          card.className = `bead-card${low ? ' is-low' : ''}`;
+          card.dataset.code = code;
+
+          const swatch = document.createElement('span');
+          swatch.className = 'swatch';
+          swatch.style.backgroundColor = hex;
+          swatch.setAttribute('aria-label', `${code} 色块 ${hex}`);
+
+          const codeLabel = document.createElement('span');
+          codeLabel.className = 'color-code';
+          codeLabel.textContent = code;
+
+          const stockLine = document.createElement('span');
+          stockLine.className = 'stock-line';
+          const quantityLabel = document.createElement('strong');
+          quantityLabel.className = 'quantity';
+          quantityLabel.textContent = numberFormat.format(quantity);
+          const unit = document.createElement('span');
+          unit.textContent = '颗';
+          const lowLabel = document.createElement('span');
+          lowLabel.className = 'low-label';
+          lowLabel.textContent = '库存不足';
+          stockLine.append(quantityLabel, unit, lowLabel);
+
+          card.append(swatch, codeLabel, stockLine);
+          fragment.append(card);
+        }
+        elements.inventoryGrid.replaceChildren(fragment);
+        elements.inventoryEmpty.hidden = colors.length !== 0;
+        elements.visibleCount.textContent = `${colors.length} 个色号`;
+      }
+
+      function renderHistory() {
+        const activeTransactions = state.warehouse.transactions
+          .filter(({ deletedAt }) => deletedAt === null)
+          .slice()
+          .sort((left, right) => (
+            right.occurredAt.localeCompare(left.occurredAt)
+            || right.createdAt.localeCompare(left.createdAt)
+            || right.id.localeCompare(left.id)
+          ));
+        const transactions = activeTransactions.filter((transaction) => {
+          const day = transaction.occurredAt.slice(0, 10);
+          return (state.historyFilters.type === 'ALL' || transaction.type === state.historyFilters.type)
+            && (state.historyFilters.code === 'ALL'
+              || Object.prototype.hasOwnProperty.call(transaction.items, state.historyFilters.code))
+            && (!state.historyFilters.startDate || day >= state.historyFilters.startDate)
+            && (!state.historyFilters.endDate || day <= state.historyFilters.endDate);
+        });
+        const fragment = document.createDocumentFragment();
+        for (const transaction of transactions.slice(0, state.historyFilters.limit)) {
+          const row = document.createElement('article');
+          row.className = 'history-row';
+          row.dataset.transactionId = transaction.id;
+
+          const title = document.createElement('span');
+          title.className = 'history-title';
+          title.textContent = transaction.label;
+
+          const items = document.createElement('span');
+          items.className = 'history-items';
+          items.textContent = Object.entries(transaction.items)
+            .map(([code, quantity]) => {
+              const signed = transaction.type === 'consume' ? -quantity : quantity;
+              return `${code} ${signed > 0 ? '+' : ''}${signed}`;
+            })
+            .join('，');
+
+          const time = document.createElement('time');
+          time.className = 'history-time';
+          time.dateTime = transaction.occurredAt;
+          time.textContent = new Intl.DateTimeFormat('zh-CN', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit'
+          }).format(new Date(transaction.occurredAt));
+
+          const actions = document.createElement('span');
+          actions.className = 'history-actions';
+          const edit = makeButton('编辑', 'historyAction', 'edit', 'btn');
+          edit.dataset.transactionId = transaction.id;
+          edit.disabled = state.storageLocked;
+          const remove = makeButton('删除', 'historyAction', 'delete', 'btn btn-danger');
+          remove.dataset.transactionId = transaction.id;
+          remove.disabled = state.storageLocked;
+          actions.append(edit, remove);
+          row.append(title, items, time, actions);
+          fragment.append(row);
+        }
+        elements.historyList.replaceChildren(fragment);
+        elements.historyCount.textContent = transactions.length === activeTransactions.length
+          ? `${transactions.length} 条记录`
+          : `${transactions.length} / ${activeTransactions.length} 条`;
+        elements.historyEmpty.hidden = transactions.length !== 0;
+        elements.historyLoadMore.hidden = transactions.length <= state.historyFilters.limit;
+      }
+
+      function makeButton(text, datasetName, datasetValue, className = 'group-btn') {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = className;
+        button.textContent = text;
+        button.dataset[datasetName] = datasetValue;
+        return button;
+      }
+
+      function renderGroupFilter() {
+        const fragment = document.createDocumentFragment();
+        const allButton = makeButton('全部', 'filterGroup', 'ALL', 'filter-btn');
+        allButton.setAttribute('aria-pressed', String(state.activeGroup === 'ALL'));
+        fragment.append(allButton);
+        for (const name of Object.keys(state.settings.groups)) {
+          const button = makeButton(name, 'filterGroup', name, 'filter-btn');
+          button.setAttribute('aria-pressed', String(state.activeGroup === name));
+          fragment.append(button);
+        }
+        elements.groupFilter.replaceChildren(fragment);
+      }
+
+      function renderPurchaseGroups() {
+        const fragment = document.createDocumentFragment();
+        for (const name of Object.keys(state.settings.groups)) {
+          fragment.append(makeButton(`选择 ${name} 色系`, 'selectGroup', name));
+        }
+        elements.purchaseGroupActions.replaceChildren(fragment);
+      }
+
+      function renderHistoryCodeFilter() {
+        const fragment = document.createDocumentFragment();
+        const all = document.createElement('option');
+        all.value = 'ALL';
+        all.textContent = '全部色号';
+        fragment.append(all);
+        for (const { code } of APP_CONFIG.colors) {
+          const option = document.createElement('option');
+          option.value = code;
+          option.textContent = code;
+          fragment.append(option);
+        }
+        elements.historyCodeFilter.replaceChildren(fragment);
+        elements.historyCodeFilter.value = state.historyFilters.code;
+      }
+
+      function renderColorChecks() {
+        const fragment = document.createDocumentFragment();
+        for (const { code, hex } of APP_CONFIG.colors) {
+          const label = document.createElement('label');
+          label.className = 'color-check';
+          label.title = `${code} ${hex}`;
+
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.value = code;
+          checkbox.dataset.colorCheckbox = code;
+          checkbox.checked = state.selectedCodes.has(code);
+
+          const swatch = document.createElement('span');
+          swatch.className = 'mini-swatch';
+          swatch.style.backgroundColor = hex;
+          swatch.setAttribute('aria-hidden', 'true');
+
+          const codeLabel = document.createElement('span');
+          codeLabel.className = 'check-code';
+          codeLabel.textContent = code;
+          label.append(checkbox, swatch, codeLabel);
+          fragment.append(label);
+        }
+        elements.colorChecks.replaceChildren(fragment);
+        renderSelectedCount();
+      }
+
+      function renderSelectedCount() {
+        elements.selectedCount.textContent = `已选择 ${state.selectedCodes.size} 个色号`;
+      }
+
+      function updateCheckboxes() {
+        elements.colorChecks.querySelectorAll('[data-color-checkbox]').forEach((checkbox) => {
+          checkbox.checked = state.selectedCodes.has(checkbox.value);
+        });
+        renderSelectedCount();
+      }
+
+      function colorOptions() {
+        const fragment = document.createDocumentFragment();
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '选择色号';
+        fragment.append(placeholder);
+        for (const { code } of APP_CONFIG.colors) {
+          const option = document.createElement('option');
+          option.value = code;
+          option.textContent = code;
+          fragment.append(option);
+        }
+        return fragment;
+      }
+
+      function refreshUsageRemoveButtons() {
+        const rows = elements.usageList.querySelectorAll('.usage-row');
+        rows.forEach((row) => {
+          row.querySelector('.remove-usage-row').disabled = state.storageLocked || rows.length === 1;
+        });
+      }
+
+      function addUsageRow(initial = {}) {
+        const rowIndex = elements.usageList.children.length + 1;
+        const row = document.createElement('div');
+        row.className = 'usage-row';
+
+        const codeGroup = document.createElement('div');
+        codeGroup.className = 'field-group';
+        const codeLabel = document.createElement('label');
+        codeLabel.className = 'field-label';
+        codeLabel.textContent = '色号';
+        const select = document.createElement('select');
+        select.className = 'field';
+        select.name = 'usage-code';
+        select.setAttribute('aria-label', `第 ${rowIndex} 行色号`);
+        select.append(colorOptions());
+        select.value = initial.code || '';
+        codeLabel.htmlFor = `usage-code-${Date.now()}-${rowIndex}`;
+        select.id = codeLabel.htmlFor;
+        codeGroup.append(codeLabel, select);
+
+        const quantityGroup = document.createElement('div');
+        quantityGroup.className = 'field-group quantity-field';
+        const quantityLabel = document.createElement('label');
+        quantityLabel.className = 'field-label';
+        quantityLabel.textContent = '消耗颗数';
+        const input = document.createElement('input');
+        input.className = 'field';
+        input.type = 'number';
+        input.name = 'usage-quantity';
+        input.min = '1';
+        input.max = '9007199254740991';
+        input.step = '1';
+        input.inputMode = 'numeric';
+        input.placeholder = '颗数';
+        input.value = initial.quantity || '';
+        quantityLabel.htmlFor = `usage-quantity-${Date.now()}-${rowIndex}`;
+        input.id = quantityLabel.htmlFor;
+        quantityGroup.append(quantityLabel, input);
+
+        const remove = document.createElement('button');
+        remove.className = 'icon-btn remove-usage-row';
+        remove.type = 'button';
+        remove.title = '删除此行';
+        remove.setAttribute('aria-label', '删除此行');
+        remove.textContent = '×';
+        row.append(codeGroup, quantityGroup, remove);
+        elements.usageList.append(row);
+        refreshUsageRemoveButtons();
+      }
+
+      function resetUsageRows() {
+        elements.usageList.replaceChildren();
+        addUsageRow();
+      }
+
+      function showShortages(shortages) {
+        const container = document.createElement('div');
+        const heading = document.createElement('strong');
+        heading.textContent = '库存不足，本次未扣减：';
+        const list = document.createElement('ul');
+        list.className = 'shortage-list';
+        for (const { code, available, required, missing } of shortages) {
+          const item = document.createElement('li');
+          item.textContent = `${code}：现有 ${available}，需要 ${required}，还差 ${missing} 颗`;
+          list.append(item);
+        }
+        container.append(heading, list);
+        setMessage(elements.usageMessage, container, { error: true, html: true });
+      }
+
+      function resetFiltersAfterSettingsChange() {
+        state.activeGroup = 'ALL';
+        state.selectedCodes.clear();
+        renderGroupFilter();
+        renderPurchaseGroups();
+        renderColorChecks();
+        renderInventory();
+      }
+
+      function createAppTransaction(type, label, items) {
+        const now = nowIso();
+        return LedgerCore.createTransaction({
+          id: randomUuid(),
+          type,
+          label,
+          items,
+          occurredAt: now,
+          deviceId: state.deviceId,
+          now
+        });
+      }
+
+      function historyFailureMessage(error) {
+        const failure = error?.failure;
+        if (failure?.kind === 'shortage') {
+          return `${failure.code}：现有 ${failure.available}，需要 ${failure.required}，还差 ${failure.missing} 颗`;
+        }
+        if (failure?.kind === 'overflow') {
+          return `${failure.code} 的库存超出安全整数范围`;
+        }
+        return error?.message || '历史记录无法保存';
+      }
+
+      function localDateTimeValue(iso) {
+        const date = new Date(iso);
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+          + `T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+      }
+
+      function refreshHistoryEditRows() {
+        const rows = elements.historyEditItems.querySelectorAll('.history-edit-row');
+        const adjustment = elements.historyType.value === 'adjustment';
+        rows.forEach((row) => {
+          const input = row.querySelector('input[type="number"]');
+          input.min = adjustment ? String(-Number.MAX_SAFE_INTEGER) : '1';
+          row.querySelector('.remove-history-item').disabled = rows.length === 1;
+        });
+      }
+
+      function addHistoryEditRow(code = '', quantity = '') {
+        const row = document.createElement('div');
+        row.className = 'history-edit-row';
+
+        const codeGroup = document.createElement('div');
+        codeGroup.className = 'field-group';
+        const codeLabel = document.createElement('label');
+        codeLabel.className = 'field-label';
+        codeLabel.textContent = '色号';
+        const select = document.createElement('select');
+        select.className = 'field';
+        select.setAttribute('aria-label', '历史记录色号');
+        select.append(colorOptions());
+        select.value = code;
+        codeGroup.append(codeLabel, select);
+
+        const quantityGroup = document.createElement('div');
+        quantityGroup.className = 'field-group history-edit-quantity';
+        const quantityLabel = document.createElement('label');
+        quantityLabel.className = 'field-label';
+        quantityLabel.textContent = '颗数';
+        const input = document.createElement('input');
+        input.className = 'field';
+        input.type = 'number';
+        input.step = '1';
+        input.max = String(Number.MAX_SAFE_INTEGER);
+        input.inputMode = 'numeric';
+        input.value = quantity;
+        quantityGroup.append(quantityLabel, input);
+
+        const remove = document.createElement('button');
+        remove.className = 'icon-btn remove-history-item';
+        remove.type = 'button';
+        remove.title = '删除此色号';
+        remove.setAttribute('aria-label', '删除此色号');
+        remove.textContent = '×';
+        row.append(codeGroup, quantityGroup, remove);
+        elements.historyEditItems.append(row);
+        refreshHistoryEditRows();
+      }
+
+      function openHistoryDialog(transactionId) {
+        const transaction = state.warehouse.transactions.find(({ id }) => id === transactionId);
+        if (!transaction || transaction.deletedAt !== null) {
+          setMessage(elements.historyMessage, '这条历史记录已不存在');
+          return;
+        }
+        state.editingTransactionId = transactionId;
+        elements.historyLabel.value = transaction.label;
+        elements.historyType.value = transaction.type;
+        elements.historyOccurredAt.value = localDateTimeValue(transaction.occurredAt);
+        elements.historyEditItems.replaceChildren();
+        for (const [code, quantity] of Object.entries(transaction.items)) {
+          addHistoryEditRow(code, quantity);
+        }
+        setMessage(elements.historyDialogMessage);
+        if (typeof elements.historyDialog.showModal === 'function') {
+          elements.historyDialog.showModal();
+        } else {
+          elements.historyDialog.setAttribute('open', '');
+        }
+      }
+
+      function closeHistoryDialog() {
+        state.editingTransactionId = null;
+        elements.historyDialog.close();
+        setMessage(elements.historyDialogMessage);
+      }
+
+      function readHistoryItems(type) {
+        const items = {};
+        const seen = new Set();
+        const rows = [...elements.historyEditItems.querySelectorAll('.history-edit-row')];
+        if (rows.length === 0) throw new Error('请至少保留一个色号');
+        rows.forEach((row, index) => {
+          const code = row.querySelector('select').value;
+          const quantity = Number(row.querySelector('input[type="number"]').value);
+          if (!code) throw new Error(`第 ${index + 1} 行请选择色号`);
+          if (seen.has(code)) throw new Error(`色号 ${code} 重复，请合并为一行`);
+          const valid = type === 'adjustment'
+            ? Number.isSafeInteger(quantity) && quantity !== 0
+            : Number.isSafeInteger(quantity) && quantity > 0;
+          if (!valid) {
+            throw new Error(type === 'adjustment'
+              ? `第 ${index + 1} 行调整数必须是非零整数`
+              : `第 ${index + 1} 行颗数必须是正整数`);
+          }
+          seen.add(code);
+          items[code] = quantity;
+        });
+        return items;
+      }
+
+      function syncErrorMessage(error) {
+        const messages = {
+          authentication: 'GitHub 令牌无效，请重新填写',
+          permission: '令牌没有该仓库的读写权限',
+          'not-found': '找不到 GitHub 仓库',
+          'rate-limit': 'GitHub 请求次数受限，请稍后重试',
+          timeout: '连接 GitHub 超时，请稍后重试',
+          network: '网络连接失败，本地数据已保留',
+          'invalid-data': '云端数据无效，未覆盖本地数据',
+          'merge-conflict': '同步存在冲突，请处理后重试',
+          'first-sync': '请选择首次同步方式'
+        };
+        return messages[error?.category] || error?.message || '同步失败';
+      }
+
+      function setSyncStatus({ state: syncState, message }) {
+        elements.syncStatus.textContent = message;
+        elements.syncStatus.dataset.state = syncState;
+        elements.syncMessage.className = 'form-message';
+        if (['failed', 'conflict'].includes(syncState)) elements.syncMessage.classList.add('is-error');
+        elements.syncMessage.textContent = message;
+      }
+
+      function savedSyncConfig() {
+        try {
+          return WarehouseStore.loadSyncConfig();
+        } catch {
+          return null;
+        }
+      }
+
+      function syncFormConfig() {
+        const saved = savedSyncConfig();
+        return {
+          owner: elements.syncOwner.value,
+          repo: elements.syncRepo.value,
+          path: elements.syncPath.value,
+          token: elements.syncToken.value || saved?.token || ''
+        };
+      }
+
+      function renderSyncConfig() {
+        const config = savedSyncConfig();
+        elements.syncOwner.value = config?.owner || '';
+        elements.syncRepo.value = config?.repo || '';
+        elements.syncPath.value = config?.path || 'perler-bead-data.json';
+        elements.syncToken.value = '';
+        elements.syncToken.placeholder = config?.token
+          ? `已保存 ${config.token.slice(0, 6)}...${config.token.slice(-4)}`
+          : '粘贴 Token';
+        elements.syncNow.disabled = !config;
+        elements.disconnectSync.disabled = !config;
+      }
+
+      function applySyncedWarehouse(warehouse) {
+        const validated = LedgerCore.validateWarehouse(warehouse, APP_CONFIG);
+        const replayed = LedgerCore.replay(validated, APP_CONFIG);
+        if (!replayed.ok) throw new Error('同步后的库存无法重算');
+        WarehouseStore.save(validated);
+        state.warehouse = validated;
+        state.inventory = replayed.inventory;
+        state.settings = validated.settings;
+        setMutationLock(false);
+        renderGroupFilter();
+        renderPurchaseGroups();
+        renderColorChecks();
+        renderDashboard();
+        renderInventory();
+        renderHistory();
+      }
+
+      function requestFirstSync({ local, remote }) {
+        firstSyncPayload = { local, remote };
+        elements.firstSyncSummary.textContent = `本地 ${local.transactions.length} 条，云端 ${remote.transactions.length} 条`;
+        elements.firstSyncDialog.showModal();
+        return new Promise((resolve) => { firstSyncResolver = resolve; });
+      }
+
+      function conflictDescription(conflict) {
+        if (conflict.kind === 'settings') return '库存设置在两台设备上都已修改';
+        if (conflict.kind === 'warehouse') return '检测到两个不同的豆仓';
+        const local = conflict.local?.label || '已删除';
+        const remote = conflict.remote?.label || '已删除';
+        return `${local} / ${remote}`;
+      }
+
+      function requestConflictChoices({ conflicts }) {
+        const fragment = document.createDocumentFragment();
+        conflicts.forEach((conflict, index) => {
+          const row = document.createElement('div');
+          row.className = 'conflict-row';
+          row.dataset.conflictKey = `${conflict.kind}:${conflict.id}`;
+          const title = document.createElement('strong');
+          title.textContent = conflict.kind === 'transaction'
+            ? `记录 ${conflict.id.slice(0, 8)}`
+            : conflict.kind === 'settings' ? '库存设置' : '豆仓';
+          const copy = document.createElement('p');
+          copy.className = 'conflict-copy';
+          copy.textContent = conflictDescription(conflict);
+          const select = document.createElement('select');
+          select.className = 'field';
+          select.name = `conflict-${index}`;
+          select.setAttribute('aria-label', `${title.textContent}的保留版本`);
+          select.append(new Option('保留本地版本', 'local'), new Option('保留云端版本', 'remote'));
+          row.append(title, copy, select);
+          fragment.append(row);
+        });
+        elements.syncConflictList.replaceChildren(fragment);
+        elements.syncConflictDialog.showModal();
+        return new Promise((resolve) => { conflictResolver = resolve; });
+      }
+
+      const SyncStore = {
+        getWarehouse: () => state.warehouse,
+        saveWarehouse: applySyncedWarehouse,
+        loadSyncConfig: () => savedSyncConfig(),
+        saveSyncConfig: (config) => WarehouseStore.saveSyncConfig(config)
+      };
+
+      function initializeSync() {
+        syncManager = new SyncManager({
+          store: SyncStore,
+          clientFactory: (config) => new GitHubClient(config),
+          validateWarehouse: (warehouse) => LedgerCore.validateWarehouse(warehouse, APP_CONFIG),
+          replay: (warehouse) => LedgerCore.replay(warehouse, APP_CONFIG),
+          onStatus: setSyncStatus,
+          onFirstSync: requestFirstSync,
+          onConflicts: requestConflictChoices
+        });
+        renderSyncConfig();
+        const config = savedSyncConfig();
+        if (config) {
+          setSyncStatus({
+            state: config.pending ? 'pending' : 'synced',
+            message: config.pending ? '等待同步' : '已同步'
+          });
+          syncTimer = setTimeout(() => syncManager.syncNow().catch(() => {}), 700);
+        } else {
+          setSyncStatus({ state: 'unconfigured', message: '未配置同步' });
+        }
+      }
+
+      function clearInventoryWithHistory() {
+        let candidate;
+        if (state.storageLocked) {
+          candidate = LedgerCore.createEmptyWarehouse(
+            APP_CONFIG, state.deviceId, nowIso(), randomUuid
+          );
+        } else {
+          const now = nowIso();
+          const adjustment = LedgerCore.createZeroAdjustment(state.warehouse, APP_CONFIG, {
+            id: randomUuid(), deviceId: state.deviceId, now
+          });
+          if (!adjustment) {
+            showToast('库存已经是零');
+            return true;
+          }
+          candidate = LedgerCore.appendTransaction(state.warehouse, adjustment, APP_CONFIG);
+        }
+        return commitWarehouse(candidate, '全部库存已清空', elements.dataMessage);
+      }
+
+      elements.search.addEventListener('input', () => {
+        state.search = elements.search.value;
+        renderInventory();
+      });
+
+      elements.groupFilter.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-filter-group]');
+        if (!button) return;
+        state.activeGroup = button.dataset.filterGroup;
+        renderGroupFilter();
+        renderInventory();
+      });
+
+      [elements.historyTypeFilter, elements.historyCodeFilter,
+        elements.historyStartDate, elements.historyEndDate].forEach((control) => {
+        control.addEventListener('change', () => {
+          state.historyFilters = {
+            type: elements.historyTypeFilter.value,
+            code: elements.historyCodeFilter.value,
+            startDate: elements.historyStartDate.value,
+            endDate: elements.historyEndDate.value,
+            limit: 50
+          };
+          renderHistory();
+        });
+      });
+
+      elements.historyLoadMore.addEventListener('click', () => {
+        state.historyFilters.limit += 50;
+        renderHistory();
+      });
+
+      elements.historyList.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-history-action]');
+        if (!button || button.disabled) return;
+        const id = button.dataset.transactionId;
+        if (button.dataset.historyAction === 'edit') {
+          openHistoryDialog(id);
+          return;
+        }
+        if (!window.confirm('确认删除这条历史记录？删除后将重新计算全部库存。')) return;
+        try {
+          const candidate = LedgerCore.deleteTransaction(
+            state.warehouse, id, state.deviceId, nowIso(), APP_CONFIG
+          );
+          if (commitWarehouse(candidate, '历史记录已删除', elements.historyMessage)) {
+            setMessage(elements.historyMessage);
+          }
+        } catch (error) {
+          setMessage(elements.historyMessage, historyFailureMessage(error));
+        }
+      });
+
+      elements.addHistoryItem.addEventListener('click', () => addHistoryEditRow());
+
+      elements.historyEditItems.addEventListener('click', (event) => {
+        const button = event.target.closest('.remove-history-item');
+        if (!button || button.disabled) return;
+        button.closest('.history-edit-row').remove();
+        refreshHistoryEditRows();
+      });
+
+      elements.historyType.addEventListener('change', refreshHistoryEditRows);
+      elements.cancelHistory.addEventListener('click', closeHistoryDialog);
+      elements.historyDialog.addEventListener('click', (event) => {
+        if (event.target === elements.historyDialog) closeHistoryDialog();
+      });
+
+      elements.historyForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        try {
+          const existing = state.warehouse.transactions.find(({ id }) => id === state.editingTransactionId);
+          if (!existing || existing.deletedAt !== null) throw new Error('这条历史记录已不存在');
+          const label = elements.historyLabel.value.trim();
+          if (!label) throw new Error('请输入记录名称');
+          const occurred = new Date(elements.historyOccurredAt.value);
+          if (Number.isNaN(occurred.getTime())) throw new Error('请选择有效的发生时间');
+          const now = nowIso();
+          const replacement = {
+            ...existing,
+            type: elements.historyType.value,
+            label,
+            items: readHistoryItems(elements.historyType.value),
+            occurredAt: occurred.toISOString(),
+            updatedAt: now,
+            deviceId: state.deviceId
+          };
+          const candidate = LedgerCore.replaceTransaction(state.warehouse, replacement, APP_CONFIG);
+          if (commitWarehouse(candidate, '历史记录已修改', elements.historyDialogMessage)) {
+            closeHistoryDialog();
+          }
+        } catch (error) {
+          setMessage(elements.historyDialogMessage, historyFailureMessage(error));
+        }
+      });
+
+      elements.addUsageRow.addEventListener('click', () => addUsageRow());
+
+      elements.usageList.addEventListener('click', (event) => {
+        const button = event.target.closest('.remove-usage-row');
+        if (!button || button.disabled) return;
+        button.closest('.usage-row').remove();
+        refreshUsageRemoveButtons();
+      });
+
+      elements.usageForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (state.storageLocked) {
+          setMessage(elements.usageMessage, '请先导入备份或清空无法读取的本地数据');
+          return;
+        }
+        try {
+          const rows = [...elements.usageList.querySelectorAll('.usage-row')].map((row) => ({
+            code: row.querySelector('select').value,
+            quantity: row.querySelector('input[type="number"]').value
+          }));
+          const usage = InventoryCore.mergeUsageRows(rows);
+          for (const code of Object.keys(usage)) {
+            if (!colorByCode.has(code)) throw new Error(`未知色号：${code}`);
+          }
+          const result = InventoryCore.consumeStock(state.inventory, usage);
+          if (!result.ok) {
+            showShortages(result.shortages);
+            return;
+          }
+          const transaction = createAppTransaction('consume', '图纸消耗', usage);
+          const candidate = LedgerCore.appendTransaction(state.warehouse, transaction, APP_CONFIG);
+          if (commitWarehouse(candidate, `已扣减 ${Object.keys(usage).length} 个色号`, elements.usageMessage)) {
+            setMessage(elements.usageMessage);
+            resetUsageRows();
+          }
+        } catch (error) {
+          setMessage(elements.usageMessage, error.message);
+        }
+      });
+
+      elements.purchaseGroupActions.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-select-group]');
+        if (!button) return;
+        state.settings.groups[button.dataset.selectGroup].forEach((code) => state.selectedCodes.add(code));
+        updateCheckboxes();
+      });
+
+      elements.colorChecks.addEventListener('change', (event) => {
+        const checkbox = event.target.closest('[data-color-checkbox]');
+        if (!checkbox) return;
+        if (checkbox.checked) state.selectedCodes.add(checkbox.value);
+        else state.selectedCodes.delete(checkbox.value);
+        renderSelectedCount();
+      });
+
+      elements.selectAll.addEventListener('click', () => {
+        state.selectedCodes = new Set(APP_CONFIG.colors.map(({ code }) => code));
+        updateCheckboxes();
+      });
+
+      elements.clearSelection.addEventListener('click', () => {
+        state.selectedCodes.clear();
+        updateCheckboxes();
+      });
+
+      elements.purchaseForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (state.storageLocked) {
+          setMessage(elements.purchaseMessage, '请先导入备份或清空无法读取的本地数据');
+          return;
+        }
+        try {
+          const selected = [...state.selectedCodes];
+          InventoryCore.addStock(
+            state.inventory,
+            selected,
+            elements.purchaseQuantity.value
+          );
+          const amount = Number(elements.purchaseQuantity.value);
+          const items = Object.fromEntries(selected.map((code) => [code, amount]));
+          const transaction = createAppTransaction('purchase', '采购入库', items);
+          const candidate = LedgerCore.appendTransaction(state.warehouse, transaction, APP_CONFIG);
+          if (commitWarehouse(candidate, `已为 ${selected.length} 个色号各入库 ${amount} 颗`, elements.purchaseMessage)) {
+            state.selectedCodes.clear();
+            elements.purchaseQuantity.value = '';
+            updateCheckboxes();
+            setMessage(elements.purchaseMessage);
+          }
+        } catch (error) {
+          setMessage(elements.purchaseMessage, error.message);
+        }
+      });
+
+      elements.syncStatus.addEventListener('click', () => {
+        elements.dataPanel.open = true;
+        elements.dataPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      elements.testSync.addEventListener('click', async () => {
+        setMessage(elements.syncMessage, '', { error: false });
+        elements.testSync.disabled = true;
+        elements.testSync.textContent = '测试中...';
+        try {
+          const client = new GitHubClient(syncFormConfig());
+          await client.testConnection();
+          setMessage(elements.syncMessage, '连接成功', { error: false });
+        } catch (error) {
+          setMessage(elements.syncMessage, syncErrorMessage(error));
+        } finally {
+          elements.testSync.disabled = false;
+          elements.testSync.textContent = '测试连接';
+        }
+      });
+
+      elements.saveSync.addEventListener('click', () => {
+        try {
+          syncManager.configure(syncFormConfig());
+          renderSyncConfig();
+          setMessage(elements.syncMessage, '同步设置已保存', { error: false });
+          clearTimeout(syncTimer);
+          syncTimer = setTimeout(() => syncManager.syncNow().catch(() => {}), 700);
+        } catch (error) {
+          setMessage(elements.syncMessage, syncErrorMessage(error));
+        }
+      });
+
+      elements.syncNow.addEventListener('click', async () => {
+        clearTimeout(syncTimer);
+        elements.syncNow.disabled = true;
+        try {
+          await syncManager.syncNow();
+        } catch (error) {
+          setMessage(elements.syncMessage, syncErrorMessage(error));
+        } finally {
+          elements.syncNow.disabled = false;
+        }
+      });
+
+      elements.disconnectSync.addEventListener('click', () => {
+        syncManager.disconnect();
+        clearTimeout(syncTimer);
+        renderSyncConfig();
+        setMessage(elements.syncMessage, '此设备已断开同步', { error: false });
+      });
+
+      elements.firstSyncDialog.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-first-sync-choice]');
+        if (!button || !firstSyncResolver) return;
+        const choice = button.dataset.firstSyncChoice;
+        if (choice === 'cloud') {
+          try {
+            localStorage.setItem(APP_CONFIG.recoveryStorageKey, JSON.stringify(firstSyncPayload.local));
+          } catch (error) {
+            setMessage(elements.syncMessage, `无法保存本地恢复副本：${error.message}`);
+            return;
+          }
+        }
+        const resolve = firstSyncResolver;
+        firstSyncResolver = null;
+        firstSyncPayload = null;
+        elements.firstSyncDialog.close();
+        resolve(choice);
+      });
+
+      elements.syncConflictForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!conflictResolver) return;
+        const choices = {};
+        elements.syncConflictList.querySelectorAll('.conflict-row').forEach((row) => {
+          choices[row.dataset.conflictKey] = row.querySelector('select').value;
+        });
+        const resolve = conflictResolver;
+        conflictResolver = null;
+        elements.syncConflictDialog.close();
+        resolve(choices);
+      });
+
+      elements.cancelConflicts.addEventListener('click', () => {
+        if (!conflictResolver) return;
+        const resolve = conflictResolver;
+        conflictResolver = null;
+        elements.syncConflictDialog.close();
+        resolve(null);
+      });
+
+      window.addEventListener('online', () => {
+        if (syncManager?.syncConfig?.pending) syncManager.syncNow().catch(() => {});
+      });
+      window.addEventListener('offline', () => {
+        if (syncManager?.syncConfig) {
+          setSyncStatus({ state: 'offline', message: '离线，等待同步' });
+        }
+      });
+
+      elements.exportBackup.addEventListener('click', () => {
+        try {
+          const blob = new Blob([JSON.stringify(state.warehouse, null, 2)], { type: 'application/json;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          const date = new Date().toISOString().slice(0, 10);
+          link.href = url;
+          link.download = `拼豆库存备份-${date}.json`;
+          document.body.append(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 0);
+          setMessage(elements.dataMessage);
+          showToast('备份已导出');
+        } catch (error) {
+          setMessage(elements.dataMessage, `导出失败：${error.message}`);
+        }
+      });
+
+      elements.importFile.addEventListener('change', async () => {
+        const [file] = elements.importFile.files;
+        if (!file) return;
+        try {
+          const text = await file.text();
+          let data;
+          try {
+            data = JSON.parse(text);
+          } catch {
+            throw new Error('备份文件不是有效的 JSON');
+          }
+          let imported;
+          if (data?.schemaVersion === LedgerCore.WAREHOUSE_SCHEMA_VERSION) {
+            imported = LedgerCore.validateWarehouse(data, APP_CONFIG);
+            const replayed = LedgerCore.replay(imported, APP_CONFIG);
+            if (!replayed.ok) {
+              const { code, occurredAt, missing } = replayed.failure;
+              throw new Error(`${code} 在 ${occurredAt} 库存不足，还差 ${missing} 颗`);
+            }
+          } else {
+            const now = nowIso();
+            imported = LedgerCore.migrateV1(data, APP_CONFIG, state.deviceId, now, randomUuid);
+          }
+          if (!window.confirm('导入将覆盖当前库存和色系配置，是否继续？')) return;
+          if (commitWarehouse(imported, '备份已恢复', elements.dataMessage)) {
+            resetFiltersAfterSettingsChange();
+            setMessage(elements.dataMessage);
+          }
+        } catch (error) {
+          setMessage(elements.dataMessage, `导入失败：${error.message}`);
+        } finally {
+          elements.importFile.value = '';
+        }
+      });
+
+      elements.clearInventory.addEventListener('click', () => {
+        if (typeof elements.clearDialog.showModal === 'function') {
+          elements.clearDialog.showModal();
+        } else if (window.confirm('确认将全部 282 个色号库存清零？')) {
+          clearInventoryWithHistory();
+        }
+      });
+
+      elements.cancelClear.addEventListener('click', () => elements.clearDialog.close());
+
+      elements.confirmClear.addEventListener('click', () => {
+        if (clearInventoryWithHistory()) {
+          elements.clearDialog.close();
+          setMessage(elements.dataMessage);
+        }
+      });
+
+      elements.clearDialog.addEventListener('click', (event) => {
+        if (event.target === elements.clearDialog) elements.clearDialog.close();
+      });
+
+      renderGroupFilter();
+      renderPurchaseGroups();
+      renderHistoryCodeFilter();
+      renderColorChecks();
+      resetUsageRows();
+      setMutationLock(state.storageLocked);
+      renderDashboard();
+      renderInventory();
+      renderHistory();
+      initializeSync();
+    })();
+  </script>
+</body>
+</html>
+
