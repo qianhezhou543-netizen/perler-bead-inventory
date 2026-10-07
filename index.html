@@ -509,6 +509,58 @@
       gap: 8px;
     }
 
+    .usage-meta {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    .usage-code-control {
+      display: grid;
+      grid-template-columns: minmax(0, 0.45fr) minmax(0, 0.8fr) minmax(0, 1fr);
+      gap: 6px;
+      align-items: end;
+    }
+
+    .legacy-code-select {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .usage-code-control .usage-code-number {
+      min-width: 0;
+    }
+
+    .usage-swatch {
+      width: 44px;
+      height: 44px;
+      border: 1px solid rgba(23, 32, 29, 0.28);
+      border-radius: 6px;
+      background: var(--surface-soft);
+    }
+
+    .usage-image-preview {
+      display: none;
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      object-fit: cover;
+    }
+
+    .usage-image-preview.is-visible {
+      display: block;
+    }
+
+    .usage-image-status {
+      color: var(--muted);
+      font-size: 12px;
+      min-height: 16px;
+    }
+
     .usage-row {
       display: grid;
       min-width: 0;
@@ -776,6 +828,16 @@
       font-weight: 800;
     }
 
+    .history-image {
+      width: 32px;
+      height: 32px;
+      margin-left: 8px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      object-fit: cover;
+      vertical-align: middle;
+    }
+
     .history-items,
     .history-time {
       min-width: 0;
@@ -1011,6 +1073,14 @@
       .sync-fields .is-wide {
         grid-column: auto;
       }
+
+      .usage-meta {
+        grid-template-columns: 1fr;
+      }
+
+      .usage-code-control {
+        grid-template-columns: minmax(0, 0.5fr) minmax(0, 0.75fr) 44px;
+      }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -1084,6 +1154,17 @@
           </summary>
           <div class="panel-body">
             <form class="form-section" id="usage-form" novalidate>
+              <div class="usage-meta">
+                <div class="field-group">
+                  <label class="field-label" for="usage-label">图纸名称（可选）</label>
+                  <input class="field" id="usage-label" maxlength="80" autocomplete="off" placeholder="例如：小兔图纸">
+                </div>
+                <div class="field-group">
+                  <label class="field-label" for="usage-image">图纸图片（可选）</label>
+                  <input class="field" id="usage-image" type="file" accept="image/*">
+                </div>
+              </div>
+              <div class="usage-image-status" id="usage-image-status" aria-live="polite"></div>
               <div class="usage-list" id="usage-list"></div>
               <button class="btn" id="add-usage-row" type="button">＋ 添加一行</button>
               <div class="form-message" id="usage-message" role="alert" tabindex="-1"></div>
@@ -1132,6 +1213,13 @@
               <label class="btn" for="import-file">导入 JSON 备份</label>
               <input id="import-file" type="file" accept="application/json,.json">
               <button class="btn btn-danger" id="clear-inventory" type="button">清空全部库存</button>
+              <div class="field-group">
+                <label class="field-label" for="low-stock-threshold">库存不足阈值（少于此数量时报警）</label>
+                <div class="inline-actions">
+                  <input class="field" id="low-stock-threshold" type="number" min="0" max="9007199254740991" step="1" inputmode="numeric" required>
+                  <button class="btn" id="save-threshold" type="button">保存阈值</button>
+                </div>
+              </div>
               <div class="sync-settings">
                 <p class="section-label">GitHub 私有仓库同步</p>
                 <div class="sync-fields">
@@ -3122,13 +3210,55 @@
         );
       }
 
+      const MAX_IMAGE_DATA_LENGTH = 400000;
+
+      function normalizeImageData(value, label = '图片') {
+        if (value === undefined || value === null || value === '') return '';
+        if (typeof value !== 'string' || !/^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=]+$/i.test(value)) {
+          throw new Error(`${label}格式无效`);
+        }
+        if (value.length > MAX_IMAGE_DATA_LENGTH) {
+          throw new Error(`${label}过大，请选择较小图片`);
+        }
+        return value;
+      }
+
+      function normalizeUsageTemplates(templates, config) {
+        if (templates === undefined) return {};
+        if (!isPlainObject(templates)) throw new Error('备份中的图纸模板无效');
+        const knownCodes = new Set(config.colors.map(({ code }) => code));
+        const normalized = {};
+        for (const [rawName, template] of Object.entries(templates)) {
+          const name = String(rawName).trim().slice(0, 80);
+          if (!name || !isPlainObject(template) || !isPlainObject(template.items)) {
+            throw new Error('备份中的图纸模板无效');
+          }
+          const items = {};
+          for (const [rawCode, rawQuantity] of Object.entries(template.items)) {
+            const code = String(rawCode).trim().toUpperCase();
+            if (rawCode !== code || !knownCodes.has(code)) {
+              throw new Error(`图纸模板包含未知色号：${rawCode}`);
+            }
+            const quantity = positiveInteger(rawQuantity, `${name} 的 ${code} 数量`);
+            items[code] = quantity;
+          }
+          if (Object.keys(items).length === 0) throw new Error('图纸模板必须包含至少一个色号');
+          normalized[name] = {
+            items,
+            imageData: normalizeImageData(template.imageData, `${name} 图片`)
+          };
+        }
+        return normalized;
+      }
+
       function createBackup(inventory, config) {
         return {
           schemaVersion: config.schemaVersion,
           exportedAt: new Date().toISOString(),
           settings: {
             lowStockThreshold: config.lowStockThreshold,
-            groups: cloneGroups(config.groups)
+            groups: cloneGroups(config.groups),
+            usageTemplates: {}
           },
           inventory: normalizeInventory(inventory, config.colors)
         };
@@ -3214,10 +3344,11 @@
         const groups = data.settings?.groups
           ? validateGroups(data.settings.groups, config)
           : cloneGroups(config.groups);
+        const usageTemplates = normalizeUsageTemplates(data.settings?.usageTemplates, config);
 
         return {
           schemaVersion: config.schemaVersion,
-          settings: { lowStockThreshold: threshold, groups },
+          settings: { lowStockThreshold: threshold, groups, usageTemplates },
           inventory: normalizeInventory(data.inventory, config.colors)
         };
       }
@@ -3230,7 +3361,9 @@
         consumeStock,
         isLowStock,
         createBackup,
-        parseBackup
+        parseBackup,
+        normalizeImageData,
+        normalizeUsageTemplates
       });
     })();
   </script>
@@ -3295,6 +3428,10 @@
         const label = typeof transaction.label === 'string' && transaction.label.trim()
           ? transaction.label.trim().slice(0, 80)
           : transaction.type;
+        const imageData = window.InventoryCore.normalizeImageData(transaction.imageData);
+        const imageName = typeof transaction.imageName === 'string'
+          ? transaction.imageName.trim().slice(0, 120)
+          : '';
         if (!isPlainObject(transaction.items) || Object.keys(transaction.items).length === 0) {
           throw new LedgerValidationError('流水必须包含至少一个色号');
         }
@@ -3322,6 +3459,8 @@
           type: transaction.type,
           label,
           items,
+          ...(imageData ? { imageData } : {}),
+          ...(imageName ? { imageName } : {}),
           occurredAt: assertIso(transaction.occurredAt, '发生时间'),
           createdAt: assertIso(transaction.createdAt, '创建时间'),
           updatedAt: assertIso(transaction.updatedAt, '修改时间'),
@@ -3430,8 +3569,9 @@
           schemaVersion: WAREHOUSE_SCHEMA_VERSION,
           warehouseId: assertUuid(idFactory(), '豆仓 ID'),
           settings: {
-            lowStockThreshold: config.lowStockThreshold,
-            groups: clone(config.groups)
+          lowStockThreshold: config.lowStockThreshold,
+            groups: clone(config.groups),
+            usageTemplates: {}
           },
           transactions: [],
           updatedAt: now
@@ -3439,12 +3579,14 @@
         return validateWarehouse(warehouse, config);
       }
 
-      function createTransaction({ id, type, label, items, occurredAt, deviceId, now }) {
+      function createTransaction({ id, type, label, items, imageData = '', imageName = '', occurredAt, deviceId, now }) {
         return {
           id,
           type,
           label,
           items: clone(items),
+          ...(imageData ? { imageData } : {}),
+          ...(imageName ? { imageName } : {}),
           occurredAt,
           createdAt: now,
           updatedAt: now,
@@ -4071,6 +4213,9 @@
         usageList: document.querySelector('#usage-list'),
         addUsageRow: document.querySelector('#add-usage-row'),
         usageMessage: document.querySelector('#usage-message'),
+        usageLabel: document.querySelector('#usage-label'),
+        usageImage: document.querySelector('#usage-image'),
+        usageImageStatus: document.querySelector('#usage-image-status'),
         purchaseForm: document.querySelector('#purchase-form'),
         purchaseGroupActions: document.querySelector('#purchase-group-actions'),
         selectedCount: document.querySelector('#selected-count'),
@@ -4083,6 +4228,8 @@
         importFile: document.querySelector('#import-file'),
         dataPanel: document.querySelector('#data-panel'),
         clearInventory: document.querySelector('#clear-inventory'),
+        lowStockThreshold: document.querySelector('#low-stock-threshold'),
+        saveThreshold: document.querySelector('#save-threshold'),
         dataMessage: document.querySelector('#data-message'),
         syncStatus: document.querySelector('#sync-status'),
         syncOwner: document.querySelector('#sync-owner'),
@@ -4128,7 +4275,8 @@
         lowStockThreshold: APP_CONFIG.lowStockThreshold,
         groups: Object.fromEntries(
           Object.entries(APP_CONFIG.groups).map(([name, codes]) => [name, [...codes]])
-        )
+        ),
+        usageTemplates: {}
       });
 
       const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -4222,6 +4370,9 @@
         historyFilters: { type: 'ALL', code: 'ALL', startDate: '', endDate: '', limit: 50 },
         editingTransactionId: null,
         storageLocked: Boolean(loaded.error),
+        usageImageData: '',
+        usageImageName: '',
+        usageImagePromise: Promise.resolve(),
         toastTimer: null
       };
       let syncManager = null;
@@ -4285,6 +4436,7 @@
           state.warehouse = warehouse;
           state.inventory = replayed.inventory;
           state.settings = warehouse.settings;
+          elements.lowStockThreshold.value = String(state.settings.lowStockThreshold);
           setMutationLock(false);
           elements.storageNotice.hidden = true;
           elements.storageNotice.textContent = '';
@@ -4312,6 +4464,10 @@
         elements.totalStock.textContent = numberFormat.format(total);
         elements.lowStockCount.textContent = numberFormat.format(lowCount);
         elements.colorCount.textContent = numberFormat.format(APP_CONFIG.colors.length);
+      }
+
+      function renderSettingsControls() {
+        elements.lowStockThreshold.value = String(state.settings.lowStockThreshold);
       }
 
       function isInActiveGroup(code) {
@@ -4387,6 +4543,13 @@
           const title = document.createElement('span');
           title.className = 'history-title';
           title.textContent = transaction.label;
+          if (transaction.imageData) {
+            const image = document.createElement('img');
+            image.className = 'history-image';
+            image.src = transaction.imageData;
+            image.alt = transaction.imageName || `${transaction.label} 图片`;
+            title.append(image);
+          }
 
           const items = document.createElement('span');
           items.className = 'history-items';
@@ -4532,6 +4695,66 @@
         });
       }
 
+      function usageGroupOptions(selected = '') {
+        const fragment = document.createDocumentFragment();
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '色系';
+        fragment.append(placeholder);
+        for (const name of Object.keys(state.settings.groups)) {
+          const option = document.createElement('option');
+          option.value = name;
+          option.textContent = name;
+          option.selected = name === selected;
+          fragment.append(option);
+        }
+        return fragment;
+      }
+
+      function usageNumberOptions(group, selected = '') {
+        const fragment = document.createDocumentFragment();
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '数字';
+        fragment.append(placeholder);
+        for (const code of state.settings.groups[group] || []) {
+          const number = code.slice(group.length);
+          const option = document.createElement('option');
+          option.value = number;
+          option.textContent = number;
+          option.selected = number === selected;
+          fragment.append(option);
+        }
+        return fragment;
+      }
+
+      function setUsageCode(row, rawCode = '') {
+        const code = String(rawCode || '').trim().toUpperCase();
+        const color = colorByCode.get(code);
+        const select = row.querySelector('.legacy-code-select');
+        const input = row.querySelector('[data-usage-code-input]');
+        const group = row.querySelector('[data-usage-group]');
+        const number = row.querySelector('[data-usage-number]');
+        const swatch = row.querySelector('.usage-swatch');
+        if (color) {
+          select.value = code;
+          input.value = code;
+          group.value = color.group;
+          number.value = code.slice(color.group.length);
+          swatch.style.backgroundColor = color.hex;
+          swatch.title = `${code} ${color.hex}`;
+          swatch.setAttribute('aria-label', `${code} 色块 ${color.hex}`);
+        } else {
+          select.value = '';
+          group.value = '';
+          number.value = '';
+          input.value = rawCode || '';
+          swatch.style.backgroundColor = '';
+          swatch.removeAttribute('title');
+          swatch.removeAttribute('aria-label');
+        }
+      }
+
       function addUsageRow(initial = {}) {
         const rowIndex = elements.usageList.children.length + 1;
         const row = document.createElement('div');
@@ -4541,16 +4764,48 @@
         codeGroup.className = 'field-group';
         const codeLabel = document.createElement('label');
         codeLabel.className = 'field-label';
-        codeLabel.textContent = '色号';
+        codeLabel.textContent = '色号（可输入或分级选择）';
+        const codeControl = document.createElement('div');
+        codeControl.className = 'usage-code-control';
+
+        const groupSelect = document.createElement('input');
+        groupSelect.className = 'field';
+        groupSelect.type = 'text';
+        groupSelect.maxLength = 1;
+        groupSelect.placeholder = '字母';
+        groupSelect.dataset.usageGroup = 'true';
+        groupSelect.setAttribute('aria-label', `第 ${rowIndex} 行色系`);
+
+        const numberSelect = document.createElement('input');
+        numberSelect.className = 'field usage-code-number';
+        numberSelect.type = 'text';
+        numberSelect.inputMode = 'numeric';
+        numberSelect.placeholder = '数字';
+        numberSelect.dataset.usageNumber = 'true';
+        numberSelect.setAttribute('aria-label', `第 ${rowIndex} 行色号数字`);
+
+        const directInput = document.createElement('input');
+        directInput.className = 'field';
+        directInput.type = 'text';
+        directInput.inputMode = 'text';
+        directInput.autocomplete = 'off';
+        directInput.placeholder = '如 A2';
+        directInput.dataset.usageCodeInput = 'true';
+        directInput.setAttribute('aria-label', `第 ${rowIndex} 行色号快速输入`);
+
+        const swatch = document.createElement('span');
+        swatch.className = 'usage-swatch';
+        swatch.setAttribute('aria-hidden', 'true');
+
         const select = document.createElement('select');
-        select.className = 'field';
+        select.className = 'legacy-code-select';
         select.name = 'usage-code';
         select.setAttribute('aria-label', `第 ${rowIndex} 行色号`);
         select.append(colorOptions());
-        select.value = initial.code || '';
         codeLabel.htmlFor = `usage-code-${Date.now()}-${rowIndex}`;
         select.id = codeLabel.htmlFor;
-        codeGroup.append(codeLabel, select);
+        codeControl.append(groupSelect, numberSelect, directInput, swatch, select);
+        codeGroup.append(codeLabel, codeControl);
 
         const quantityGroup = document.createElement('div');
         quantityGroup.className = 'field-group quantity-field';
@@ -4579,12 +4834,54 @@
         remove.textContent = '×';
         row.append(codeGroup, quantityGroup, remove);
         elements.usageList.append(row);
+        setUsageCode(row, initial.code || '');
         refreshUsageRemoveButtons();
       }
 
       function resetUsageRows() {
         elements.usageList.replaceChildren();
         addUsageRow();
+      }
+
+      function usageItemsFromRows() {
+        const rows = [...elements.usageList.querySelectorAll('.usage-row')];
+        return InventoryCore.mergeUsageRows(rows.map((row) => ({
+          code: row.querySelector('.legacy-code-select').value,
+          quantity: row.querySelector('input[type="number"]').value
+        })));
+      }
+
+      function applyUsageTemplate(name) {
+        const template = state.settings.usageTemplates?.[name.trim()];
+        if (!template) return;
+        elements.usageList.replaceChildren();
+        Object.entries(template.items).forEach(([code, quantity]) => addUsageRow({ code, quantity }));
+        state.usageImageData = template.imageData || '';
+        state.usageImageName = '';
+        elements.usageImageStatus.textContent = state.usageImageData ? '已载入该图纸的图片模板' : '已载入该图纸的色号和数量模板';
+      }
+
+      function readUsageImage(file) {
+        return new Promise((resolve, reject) => {
+          if (!file) return resolve({ data: '', name: '' });
+          if (!file.type.startsWith('image/')) return reject(new Error('请选择图片文件'));
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('图片读取失败'));
+          reader.onload = () => {
+            const image = new Image();
+            image.onerror = () => reject(new Error('图片解析失败'));
+            image.onload = () => {
+              const scale = Math.min(1, 320 / Math.max(image.width, image.height));
+              const canvas = document.createElement('canvas');
+              canvas.width = Math.max(1, Math.round(image.width * scale));
+              canvas.height = Math.max(1, Math.round(image.height * scale));
+              canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+              resolve({ data: canvas.toDataURL('image/jpeg', 0.72), name: file.name });
+            };
+            image.src = reader.result;
+          };
+          reader.readAsDataURL(file);
+        });
       }
 
       function showShortages(shortages) {
@@ -4611,13 +4908,15 @@
         renderInventory();
       }
 
-      function createAppTransaction(type, label, items) {
+      function createAppTransaction(type, label, items, metadata = {}) {
         const now = nowIso();
         return LedgerCore.createTransaction({
           id: randomUuid(),
           type,
           label,
           items,
+          imageData: metadata.imageData || '',
+          imageName: metadata.imageName || '',
           occurredAt: now,
           deviceId: state.deviceId,
           now
@@ -5005,6 +5304,85 @@
 
       elements.addUsageRow.addEventListener('click', () => addUsageRow());
 
+      elements.usageLabel.addEventListener('input', () => {
+        const name = elements.usageLabel.value.trim();
+        if (name && state.settings.usageTemplates?.[name]) applyUsageTemplate(name);
+      });
+
+      elements.usageImage.addEventListener('change', async () => {
+        state.usageImagePromise = readUsageImage(elements.usageImage.files[0])
+          .then((result) => {
+            state.usageImageData = result.data;
+            state.usageImageName = result.name;
+            elements.usageImageStatus.textContent = result.data ? `已载入图片：${result.name}` : '';
+          })
+          .catch((error) => {
+            state.usageImageData = '';
+            state.usageImageName = '';
+            elements.usageImageStatus.textContent = error.message;
+            elements.usageImage.value = '';
+          });
+      });
+
+      elements.usageList.addEventListener('input', (event) => {
+        const input = event.target.closest('[data-usage-code-input]');
+        if (!input) return;
+        setUsageCode(input.closest('.usage-row'), input.value);
+      });
+
+      elements.usageList.addEventListener('change', (event) => {
+        const row = event.target.closest('.usage-row');
+        if (!row) return;
+        if (event.target.matches('.legacy-code-select')) setUsageCode(row, event.target.value);
+        if (event.target.matches('[data-usage-group]')) {
+          const group = event.target.value.trim().toUpperCase();
+          event.target.value = group;
+          row.querySelector('[data-usage-number]').value = '';
+          row.querySelector('.legacy-code-select').value = '';
+          row.querySelector('[data-usage-code-input]').value = '';
+          const swatch = row.querySelector('.usage-swatch');
+          swatch.style.backgroundColor = '';
+          swatch.removeAttribute('title');
+          swatch.removeAttribute('aria-label');
+        }
+        if (event.target.matches('[data-usage-number]')) {
+          const group = row.querySelector('[data-usage-group]').value;
+          setUsageCode(row, group && event.target.value ? `${group}${event.target.value}` : '');
+        }
+      });
+
+      elements.usageList.addEventListener('keydown', (event) => {
+        const row = event.target.closest('.usage-row');
+        if (!row) return;
+        const rows = [...elements.usageList.querySelectorAll('.usage-row')];
+        const rowIndex = rows.indexOf(row);
+        if (event.key === 'Enter' && event.target.matches('input[type="number"]')) {
+          event.preventDefault();
+          addUsageRow();
+          elements.usageList.lastElementChild.querySelector('[data-usage-code-input]').focus();
+        } else if ((event.key === 'ArrowUp' || event.key === 'ArrowDown') && event.target.matches('input, select')) {
+          const targetRow = rows[rowIndex + (event.key === 'ArrowUp' ? -1 : 1)];
+          if (targetRow) {
+            event.preventDefault();
+            const target = targetRow.querySelector(`[name="${event.target.name}"]`) || targetRow.querySelector('[data-usage-code-input]');
+            target?.focus();
+          }
+        } else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && event.target.matches('input, select')) {
+          const fields = [...row.querySelectorAll('[data-usage-group], [data-usage-number], [data-usage-code-input], input[type="number"]')];
+          const fieldIndex = fields.indexOf(event.target);
+          const target = fields[fieldIndex + (event.key === 'ArrowLeft' ? -1 : 1)];
+          if (target) {
+            const atBoundary = event.target.tagName === 'INPUT' && typeof event.target.selectionStart === 'number'
+              ? (event.key === 'ArrowLeft' ? event.target.selectionStart === 0 : event.target.selectionStart === event.target.value.length)
+              : true;
+            if (atBoundary) {
+              event.preventDefault();
+              target.focus();
+            }
+          }
+        }
+      });
+
       elements.usageList.addEventListener('click', (event) => {
         const button = event.target.closest('.remove-usage-row');
         if (!button || button.disabled) return;
@@ -5012,13 +5390,14 @@
         refreshUsageRemoveButtons();
       });
 
-      elements.usageForm.addEventListener('submit', (event) => {
+      elements.usageForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (state.storageLocked) {
           setMessage(elements.usageMessage, '请先导入备份或清空无法读取的本地数据');
           return;
         }
         try {
+          await state.usageImagePromise;
           const rows = [...elements.usageList.querySelectorAll('.usage-row')].map((row) => ({
             code: row.querySelector('select').value,
             quantity: row.querySelector('input[type="number"]').value
@@ -5032,11 +5411,28 @@
             showShortages(result.shortages);
             return;
           }
-          const transaction = createAppTransaction('consume', '图纸消耗', usage);
-          const candidate = LedgerCore.appendTransaction(state.warehouse, transaction, APP_CONFIG);
+          const label = elements.usageLabel.value.trim() || '图纸消耗';
+          const transaction = createAppTransaction('consume', label, usage, {
+            imageData: state.usageImageData,
+            imageName: state.usageImageName
+          });
+          const usageTemplates = {
+            ...(state.settings.usageTemplates || {}),
+            [label]: { items: usage, imageData: state.usageImageData || '' }
+          };
+          const candidate = LedgerCore.appendTransaction({
+            ...state.warehouse,
+            settings: { ...state.warehouse.settings, usageTemplates }
+          }, transaction, APP_CONFIG);
           if (commitWarehouse(candidate, `已扣减 ${Object.keys(usage).length} 个色号`, elements.usageMessage)) {
             setMessage(elements.usageMessage);
             resetUsageRows();
+            elements.usageLabel.value = '';
+            elements.usageImage.value = '';
+            elements.usageImageStatus.textContent = '';
+            state.usageImageData = '';
+            state.usageImageName = '';
+            state.usageImagePromise = Promise.resolve();
           }
         } catch (error) {
           setMessage(elements.usageMessage, error.message);
@@ -5093,6 +5489,26 @@
           }
         } catch (error) {
           setMessage(elements.purchaseMessage, error.message);
+        }
+      });
+
+      elements.saveThreshold.addEventListener('click', () => {
+        try {
+          const raw = elements.lowStockThreshold.value.trim();
+          if (!/^\d+$/.test(raw)) throw new Error('库存预警阈值必须是非负整数');
+          const threshold = Number(raw);
+          if (!Number.isSafeInteger(threshold) || threshold < 0) {
+            throw new Error('库存预警阈值必须是非负安全整数');
+          }
+          const candidate = {
+            ...state.warehouse,
+            settings: { ...state.warehouse.settings, lowStockThreshold: threshold }
+          };
+          if (commitWarehouse(candidate, '库存预警阈值已保存', elements.dataMessage)) {
+            setMessage(elements.dataMessage, '库存预警阈值已保存', { error: false });
+          }
+        } catch (error) {
+          setMessage(elements.dataMessage, error.message);
         }
       });
 
@@ -5276,6 +5692,7 @@
       renderPurchaseGroups();
       renderHistoryCodeFilter();
       renderColorChecks();
+      renderSettingsControls();
       resetUsageRows();
       setMutationLock(state.storageLocked);
       renderDashboard();
@@ -5286,4 +5703,3 @@
   </script>
 </body>
 </html>
-
